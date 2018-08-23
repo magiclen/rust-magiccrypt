@@ -1,0 +1,9 @@
+[package]
+name = "magic-crypt"
+version = "0.1.0"
+authors = ["Magic Len <len@magiclen.org>"]
+
+[dependencies]
+rust-crypto = "0.2.36"
+tiny-keccak = "1.4.2"
+base64 = "0.9.2"
