@@ -1,31 +1,23 @@
 extern crate crypto;
 extern crate tiny_keccak;
 extern crate base64;
+extern crate tiger_digest;
+extern crate digest;
 
 use std::io::{self, Read, Write};
 use std::string::FromUtf8Error;
 
-use tiny_keccak::{shake128, shake256, Keccak};
+use tiger_digest::Tiger;
+use digest::FixedOutput;
 
-use crypto::aes::{KeySize, ecb_encryptor, ecb_decryptor};
+use tiny_keccak::{shake128, shake256};
+
+use crypto::aes::{KeySize, cbc_encryptor, cbc_decryptor};
 use crypto::symmetriccipher::{Encryptor, Decryptor, SymmetricCipherError};
-use crypto::blockmodes::PkcsPadding;
+use crypto::blockmodes::{PkcsPadding, PaddingProcessor};
 use crypto::buffer::{RefReadBuffer, RefWriteBuffer, BufferResult, WriteBuffer, ReadBuffer};
 
 const BUFFER_SIZE: usize = 4096;
-
-fn shake192_inner(data: &[u8], result: &mut [u8]) {
-    let mut keccak = Keccak::new(200 - 24, 0x1f);
-    keccak.update(data);
-    keccak.finalize(result);
-}
-
-fn shake192(data: &[u8]) -> [u8; 24] {
-    let mut result = [0u8; 24];
-    shake192_inner(data, &mut result);
-
-    result
-}
 
 pub enum SecureBit {
     Bit128,
@@ -60,6 +52,48 @@ macro_rules! get_cipher_len {
     }
 }
 
+pub struct EncPadding<X> {
+    padding: X
+}
+
+impl<X: PaddingProcessor> EncPadding<X> {
+    fn wrap(p: X) -> EncPadding<X> { EncPadding { padding: p } }
+}
+
+impl<X: PaddingProcessor> PaddingProcessor for EncPadding<X> {
+    fn pad_input<W: WriteBuffer>(&mut self, a: &mut W) { self.padding.pad_input(a); }
+    fn strip_output<R: ReadBuffer>(&mut self, _: &mut R) -> bool { true }
+}
+
+pub struct DecPadding<X> {
+    padding: X
+}
+
+impl<X: PaddingProcessor> DecPadding<X> {
+    fn wrap(p: X) -> DecPadding<X> { DecPadding { padding: p } }
+}
+
+impl<X: PaddingProcessor> PaddingProcessor for DecPadding<X> {
+    fn pad_input<W: WriteBuffer>(&mut self, _: &mut W) {}
+    fn strip_output<R: ReadBuffer>(&mut self, a: &mut R) -> bool { self.padding.strip_output(a) }
+}
+
+macro_rules! enc_padding {
+    ( ) => {
+        {
+            EncPadding::wrap(PkcsPadding)
+        }
+    }
+}
+
+macro_rules! dec_padding {
+    ( ) => {
+        {
+            DecPadding::wrap(PkcsPadding)
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Error {
     CipherError(SymmetricCipherError),
@@ -69,13 +103,20 @@ pub enum Error {
 }
 
 impl MagicCrypt {
-    pub fn new(key: &str, bit: SecureBit) -> MagicCrypt {
+    pub fn new(key: &str, bit: SecureBit, iv: Option<&str>) -> MagicCrypt {
+        let iv = match iv {
+            Some(s) => {
+                shake128(s.as_bytes())
+            }
+            None => [0u8; 16]
+        };
+
         match bit {
             SecureBit::Bit128 => {
                 let key = shake128(key.as_bytes());
 
-                let encryptor = ecb_encryptor(KeySize::KeySize128, &key,  PkcsPadding);
-                let decryptor = ecb_decryptor(KeySize::KeySize128, &key,  PkcsPadding);
+                let encryptor = cbc_encryptor(KeySize::KeySize128, &key, &iv, enc_padding!());
+                let decryptor = cbc_decryptor(KeySize::KeySize128, &key, &iv, dec_padding!());
 
                 MagicCrypt {
                     encryptor,
@@ -83,10 +124,14 @@ impl MagicCrypt {
                 }
             }
             SecureBit::Bit192 => {
-                let key = shake192(key.as_bytes());
+                let mut tiger = Tiger::default();
 
-                let encryptor = ecb_encryptor(KeySize::KeySize192, &key,  PkcsPadding);
-                let decryptor = ecb_decryptor(KeySize::KeySize192, &key,  PkcsPadding);
+                tiger.consume(key.as_bytes());
+
+                let key = tiger.fixed_result();
+
+                let encryptor = cbc_encryptor(KeySize::KeySize192, &key, &iv, enc_padding!());
+                let decryptor = cbc_decryptor(KeySize::KeySize192, &key, &iv, dec_padding!());
 
                 MagicCrypt {
                     encryptor,
@@ -96,8 +141,8 @@ impl MagicCrypt {
             SecureBit::Bit256 => {
                 let key = shake256(key.as_bytes());
 
-                let encryptor = ecb_encryptor(KeySize::KeySize256, &key,  PkcsPadding);
-                let decryptor = ecb_decryptor(KeySize::KeySize256, &key,  PkcsPadding);
+                let encryptor = cbc_encryptor(KeySize::KeySize256, &key, &iv, enc_padding!());
+                let decryptor = cbc_decryptor(KeySize::KeySize256, &key, &iv, dec_padding!());
 
                 MagicCrypt {
                     encryptor,
@@ -226,7 +271,7 @@ impl MagicCrypt {
     }
 
     pub fn decrypt_bytes_to_bytes(&mut self, bytes: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut final_result = Vec::with_capacity( bytes.len());
+        let mut final_result = Vec::with_capacity(bytes.len());
 
         let mut buffer = [0u8; BUFFER_SIZE];
 
@@ -322,28 +367,49 @@ macro_rules! new_magic_crypt {
         {
             use self::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit128)
+            MagicCrypt::new($key, SecureBit::Bit128, None)
         }
     };
     ( $key:expr, 128 ) => {
         {
             use self::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit128)
+            MagicCrypt::new($key, SecureBit::Bit128, None)
         }
     };
     ( $key:expr, 192 ) => {
         {
             use self::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit192)
+            MagicCrypt::new($key, SecureBit::Bit192, None)
         }
     };
     ( $key:expr, 256 ) => {
         {
             use self::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit256)
+            MagicCrypt::new($key, SecureBit::Bit256, None)
+        }
+    };
+    ( $key:expr, 128, $iv:expr ) => {
+        {
+            use self::magic_crypt::*;
+
+            MagicCrypt::new($key, SecureBit::Bit128, Some($iv))
+        }
+    };
+    ( $key:expr, 192, $iv:expr ) => {
+        {
+            use self::magic_crypt::*;
+
+            MagicCrypt::new($key, SecureBit::Bit192, Some($iv))
+        }
+    };
+    ( $key:expr, 256, $iv:expr ) => {
+        {
+            use self::magic_crypt::*;
+
+            MagicCrypt::new($key, SecureBit::Bit256, Some($iv))
         }
     };
 }
