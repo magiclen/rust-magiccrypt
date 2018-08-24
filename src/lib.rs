@@ -66,6 +66,7 @@ use crypto::digest::Digest;
 
 const BUFFER_SIZE: usize = 4096;
 
+/// How secure does your encryption need to be?
 pub enum SecureBit {
     Bit64,
     Bit128,
@@ -89,16 +90,19 @@ impl SecureBit {
     }
 }
 
+/// You should use `MagicCrypt` enum.
 pub struct MagicCryptAES {
     encryptor: Box<Encryptor>,
     decryptor: Box<Decryptor>,
 }
 
+/// You should use `MagicCrypt` enum.
 pub struct MagicCryptDES {
     key: [u8; 8],
     iv: [u8; 8],
 }
 
+/// This enum of structs can help you encrypt or decrypt data in a quick way.
 pub enum MagicCrypt {
     AES(MagicCryptAES),
     DES(MagicCryptDES),
@@ -120,7 +124,7 @@ macro_rules! get_des_cipher_space {
     }
 }
 
-pub struct EncPadding<X> {
+struct EncPadding<X> {
     padding: X
 }
 
@@ -133,7 +137,7 @@ impl<X: PaddingProcessor> PaddingProcessor for EncPadding<X> {
     fn strip_output<R: ReadBuffer>(&mut self, _: &mut R) -> bool { true }
 }
 
-pub struct DecPadding<X> {
+struct DecPadding<X> {
     padding: X
 }
 
@@ -162,6 +166,7 @@ macro_rules! dec_padding {
     }
 }
 
+/// Errors for MagicCrypt.
 #[derive(Debug)]
 pub enum Error {
     CipherError(SymmetricCipherError),
@@ -171,6 +176,7 @@ pub enum Error {
 }
 
 impl MagicCrypt {
+    /// Create a new MagicCrypt instance. You may want to use `new_magic_crypt!` macro.
     pub fn new(key: &str, bit: SecureBit, iv: Option<&str>) -> MagicCrypt {
         if let SecureBit::Bit64 = bit {
             let iv = match iv {
@@ -615,6 +621,7 @@ impl MagicCrypt {
     }
 }
 
+/// This macro provides a convenient way to create a MagicCrypt instance.
 #[macro_export]
 macro_rules! new_magic_crypt {
     ( $key:expr ) => {
@@ -657,6 +664,13 @@ macro_rules! new_magic_crypt {
             use self::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit64, None)
+        }
+    };
+    ( $key:expr, 64, $iv:expr ) => {
+        {
+            use self::magic_crypt::*;
+
+            MagicCrypt::new($key, SecureBit::Bit64, Some($iv))
         }
     };
     ( $key:expr, 128, $iv:expr ) => {
