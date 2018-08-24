@@ -10,7 +10,7 @@ MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, 
 
 ### Example
 
-```
+```rust
 #[macro_use] extern crate magic_crypt;
 
 use magic_crypt::MagicCrypt;
