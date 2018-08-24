@@ -1,16 +1,50 @@
+//! # MagicCrypt
+//!
+//! ## Introduction
+//! MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, or data, using Data Encryption Standard(DES) or Advanced Encryption Standard(AES) algorithms. It supports CBC block cipher mode, PKCS5 padding and 64, 128, 192 or 256-bits key length. If the encrypted data is a string, it will be formatted automatically to Base64.
+//!
+//! ## For Rust
+//!
+//! ### Example
+//!
+//! ```
+//! #[macro_use] extern crate magic_crypt;
+//!
+//! use magic_crypt::MagicCrypt;
+//!
+//! let mut mc: MagicCrypt = new_magic_crypt!("magickey", 256);
+//!
+//! let base64 = mc.encrypt_str_to_base64("http://magiclen.org");
+//!
+//! assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
+//!
+//! assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
+//!```
+//!
+//! ## For Java
+//!
+//! Refer to https://github.com/magiclen/MagicCrypt.
+//!
+//! ## For PHP
+//!
+//! Refer to https://github.com/magiclen/MagicCrypt.
+//!
+//! ## For NodeJS
+//!
+//! Refer to https://github.com/magiclen/node-magiccrypt
+
 extern crate crypto;
-extern crate crc;
+extern crate crc_any;
 extern crate base64;
 extern crate digest;
 extern crate des;
 extern crate block_modes;
 extern crate tiger_digest;
 
-use std::mem::transmute;
 use std::io::{self, Read, Write};
 use std::string::FromUtf8Error;
 
-use crc::{crc64, Hasher64};
+use crc_any::CRC;
 
 use tiger_digest::Tiger;
 use digest::FixedOutput;
@@ -41,7 +75,9 @@ pub enum SecureBit {
 
 impl SecureBit {
     pub fn from(bit_number: u16) -> Result<SecureBit, &'static str> {
-        Ok(if bit_number == 128 {
+        Ok(if bit_number == 64 {
+            SecureBit::Bit64
+        } else if bit_number == 128 {
             SecureBit::Bit128
         } else if bit_number == 192 {
             SecureBit::Bit192
@@ -59,7 +95,8 @@ pub struct MagicCryptAES {
 }
 
 pub struct MagicCryptDES {
-    cipher: DesCbc
+    key: [u8; 8],
+    iv: [u8; 8],
 }
 
 pub enum MagicCrypt {
@@ -67,10 +104,18 @@ pub enum MagicCrypt {
     DES(MagicCryptDES),
 }
 
-macro_rules! get_cipher_len {
+macro_rules! get_aes_cipher_len {
     ( $len:expr ) => {
         {
             (($len + 16) / 16 ) * 16
+        }
+    }
+}
+
+macro_rules! get_des_cipher_space {
+    ( $len:expr ) => {
+        {
+            (($len + 8) / 8 ) * 8 + ($len % 8)
         }
     }
 }
@@ -130,28 +175,22 @@ impl MagicCrypt {
         if let SecureBit::Bit64 = bit {
             let iv = match iv {
                 Some(s) => {
-                    let mut digest = crc64::Digest::new(crc64::ECMA);
-                    digest.write(s.as_bytes());
+                    let mut crc64ecma = CRC::crc64ecma();
+                    crc64ecma.digest(s.as_bytes());
 
-                    unsafe {
-                        transmute(digest.sum64().to_be())
-                    }
+                    crc64ecma.get_crc_array().0
                 }
                 None => [0u8; 8]
             };
 
             let key: [u8; 8] = {
-                let mut digest = crc64::Digest::new(crc64::ECMA);
-                digest.write(key.as_bytes());
+                let mut crc64ecma = CRC::crc64ecma();
+                crc64ecma.digest(key.as_bytes());
 
-                unsafe {
-                    transmute(digest.sum64().to_be())
-                }
+                crc64ecma.get_crc_array().0
             };
 
-            let cipher = DesCbc::new_varkey(&key, GenericArray::from_slice(&iv)).unwrap();
-
-            MagicCrypt::DES(MagicCryptDES {cipher})
+            MagicCrypt::DES(MagicCryptDES { key, iv })
         } else {
             let iv = match iv {
                 Some(s) => {
@@ -237,8 +276,27 @@ impl MagicCrypt {
 
     pub fn encrypt_bytes_to_bytes(&mut self, bytes: &[u8]) -> Vec<u8> {
         match self {
+            MagicCrypt::DES(mc) => {
+                let len = bytes.len();
+
+                let final_len = get_des_cipher_space!(len);
+
+                let mut buffer = Vec::with_capacity(final_len);
+
+                unsafe {
+                    buffer.set_len(final_len);
+                }
+
+                buffer[..len].copy_from_slice(&bytes);
+
+                let cipher = DesCbc::new_varkey(&mc.key, GenericArray::from_slice(&mc.iv)).unwrap();
+
+                let enc = cipher.encrypt_pad(&mut buffer, len).unwrap();
+
+                enc.to_vec()
+            }
             MagicCrypt::AES(mc) => {
-                let mut final_result = Vec::with_capacity(get_cipher_len!(bytes.len()));
+                let mut final_result = Vec::with_capacity(get_aes_cipher_len!(bytes.len()));
 
                 let mut buffer = [0u8; BUFFER_SIZE];
 
@@ -258,7 +316,6 @@ impl MagicCrypt {
 
                 final_result
             }
-            _ => panic!("not here")
         }
     }
 
@@ -268,6 +325,30 @@ impl MagicCrypt {
 
     pub fn encrypt_reader_to_bytes(&mut self, reader: &mut Read) -> Result<Vec<u8>, Error> {
         match self {
+            MagicCrypt::DES(mc) => {
+                let mut final_result = Vec::new();
+
+                let mut buffer1 = [0u8; BUFFER_SIZE + 16];
+
+                loop {
+                    match reader.read(&mut buffer1) {
+                        Ok(c) => {
+                            if c <= 0 {
+                                break;
+                            }
+
+                            let cipher = DesCbc::new_varkey(&mc.key, GenericArray::from_slice(&mc.iv)).unwrap();
+
+                            let enc = cipher.encrypt_pad(&mut buffer1[..BUFFER_SIZE], c).unwrap();
+
+                            final_result.extend(enc);
+                        }
+                        Err(err) => return Err(Error::IOError(err))
+                    }
+                }
+
+                Ok(final_result)
+            }
             MagicCrypt::AES(mc) => {
                 let mut final_result = Vec::new();
 
@@ -285,7 +366,7 @@ impl MagicCrypt {
                             loop {
                                 let mut output = RefWriteBuffer::new(&mut buffer2);
 
-                                let result = mc.encryptor.encrypt(&mut RefReadBuffer::new(&buffer1[0..c]), &mut output, false).map_err(|err| Error::CipherError(err))?;
+                                let result = mc.encryptor.encrypt(&mut RefReadBuffer::new(&buffer1[..c]), &mut output, false).map_err(|err| Error::CipherError(err))?;
 
                                 final_result.write(output
                                     .take_read_buffer()
@@ -302,12 +383,33 @@ impl MagicCrypt {
 
                 Ok(final_result)
             }
-            _ => panic!("not here")
         }
     }
 
     pub fn encrypt_reader_to_writer(&mut self, reader: &mut Read, writer: &mut Write) -> Result<(), Error> {
         match self {
+            MagicCrypt::DES(mc) => {
+                let mut buffer1 = [0u8; BUFFER_SIZE + 16];
+
+                loop {
+                    match reader.read(&mut buffer1) {
+                        Ok(c) => {
+                            if c <= 0 {
+                                break;
+                            }
+
+                            let cipher = DesCbc::new_varkey(&mc.key, GenericArray::from_slice(&mc.iv)).unwrap();
+
+                            let enc = cipher.encrypt_pad(&mut buffer1[..BUFFER_SIZE], c).unwrap();
+
+                            writer.write(enc).map_err(|err| Error::IOError(err))?;
+                        }
+                        Err(err) => return Err(Error::IOError(err))
+                    }
+                }
+
+                Ok(())
+            }
             MagicCrypt::AES(mc) => {
                 let mut buffer1 = [0u8; BUFFER_SIZE];
 
@@ -323,7 +425,7 @@ impl MagicCrypt {
                             loop {
                                 let mut output = RefWriteBuffer::new(&mut buffer2);
 
-                                let result = mc.encryptor.encrypt(&mut RefReadBuffer::new(&buffer1[0..c]), &mut output, true).map_err(|err| Error::CipherError(err))?;
+                                let result = mc.encryptor.encrypt(&mut RefReadBuffer::new(&buffer1[..c]), &mut output, true).map_err(|err| Error::CipherError(err))?;
 
                                 writer.write(output
                                     .take_read_buffer()
@@ -340,7 +442,6 @@ impl MagicCrypt {
 
                 Ok(())
             }
-            _ => panic!("not here")
         }
     }
 
@@ -358,6 +459,15 @@ impl MagicCrypt {
 
     pub fn decrypt_bytes_to_bytes(&mut self, bytes: &[u8]) -> Result<Vec<u8>, Error> {
         match self {
+            MagicCrypt::DES(mc) => {
+                let mut buffer = bytes.to_vec();
+
+                let cipher = DesCbc::new_varkey(&mc.key, GenericArray::from_slice(&mc.iv)).unwrap();
+
+                let dec = cipher.decrypt_pad(&mut buffer).unwrap();
+
+                Ok(dec.to_vec())
+            }
             MagicCrypt::AES(mc) => {
                 let mut final_result = Vec::with_capacity(bytes.len());
 
@@ -379,12 +489,35 @@ impl MagicCrypt {
 
                 Ok(final_result)
             }
-            _ => panic!("not here")
         }
     }
 
     pub fn decrypt_reader_to_bytes(&mut self, reader: &mut Read) -> Result<Vec<u8>, Error> {
         match self {
+            MagicCrypt::DES(mc) => {
+                let mut final_result = Vec::new();
+
+                let mut buffer = [0u8; BUFFER_SIZE];
+
+                loop {
+                    match reader.read(&mut buffer) {
+                        Ok(c) => {
+                            if c <= 0 {
+                                break;
+                            }
+
+                            let cipher = DesCbc::new_varkey(&mc.key, GenericArray::from_slice(&mc.iv)).unwrap();
+
+                            let dec = cipher.decrypt_pad(&mut buffer[..c]).unwrap();
+
+                            final_result.extend(dec);
+                        }
+                        Err(err) => return Err(Error::IOError(err))
+                    }
+                }
+
+                Ok(final_result)
+            }
             MagicCrypt::AES(mc) => {
                 let mut final_result = Vec::new();
 
@@ -402,7 +535,7 @@ impl MagicCrypt {
                             loop {
                                 let mut output = RefWriteBuffer::new(&mut buffer2);
 
-                                let result = mc.decryptor.decrypt(&mut RefReadBuffer::new(&buffer1[0..c]), &mut output, false).map_err(|err| Error::CipherError(err))?;
+                                let result = mc.decryptor.decrypt(&mut RefReadBuffer::new(&buffer1[..c]), &mut output, false).map_err(|err| Error::CipherError(err))?;
 
                                 final_result.write(output
                                     .take_read_buffer()
@@ -419,12 +552,33 @@ impl MagicCrypt {
 
                 Ok(final_result)
             }
-            _ => panic!("not here")
         }
     }
 
     pub fn decrypt_reader_to_writer(&mut self, reader: &mut Read, writer: &mut Write) -> Result<(), Error> {
         match self {
+            MagicCrypt::DES(mc) => {
+                let mut buffer = [0u8; BUFFER_SIZE];
+
+                loop {
+                    match reader.read(&mut buffer) {
+                        Ok(c) => {
+                            if c <= 0 {
+                                break;
+                            }
+
+                            let cipher = DesCbc::new_varkey(&mc.key, GenericArray::from_slice(&mc.iv)).unwrap();
+
+                            let dec = cipher.decrypt_pad(&mut buffer[..c]).unwrap();
+
+                            writer.write(dec).map_err(|err| Error::IOError(err))?;
+                        }
+                        Err(err) => return Err(Error::IOError(err))
+                    }
+                }
+
+                Ok(())
+            }
             MagicCrypt::AES(mc) => {
                 let mut buffer1 = [0u8; BUFFER_SIZE];
 
@@ -440,7 +594,7 @@ impl MagicCrypt {
                             loop {
                                 let mut output = RefWriteBuffer::new(&mut buffer2);
 
-                                let result = mc.decryptor.decrypt(&mut RefReadBuffer::new(&buffer1[0..c]), &mut output, true).map_err(|err| Error::CipherError(err))?;
+                                let result = mc.decryptor.decrypt(&mut RefReadBuffer::new(&buffer1[..c]), &mut output, true).map_err(|err| Error::CipherError(err))?;
 
                                 writer.write(output
                                     .take_read_buffer()
@@ -457,7 +611,6 @@ impl MagicCrypt {
 
                 Ok(())
             }
-            _ => panic!("not here")
         }
     }
 }
