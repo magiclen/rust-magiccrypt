@@ -269,18 +269,28 @@ impl MagicCrypt {
     }
 
     pub fn encrypt_str_to_base64(&mut self, string: &str) -> String {
-        self.encrypt_bytes_to_base64(string.as_bytes())
+        self.encrypt_to_base64(string)
     }
 
     pub fn encrypt_str_to_bytes(&mut self, string: &str) -> Vec<u8> {
-        self.encrypt_bytes_to_bytes(string.as_bytes())
+        self.encrypt_to_bytes(string)
     }
 
     pub fn encrypt_bytes_to_base64(&mut self, bytes: &[u8]) -> String {
-        base64::encode(&self.encrypt_bytes_to_bytes(bytes))
+        self.encrypt_to_base64(bytes)
     }
 
     pub fn encrypt_bytes_to_bytes(&mut self, bytes: &[u8]) -> Vec<u8> {
+        self.encrypt_to_bytes(bytes)
+    }
+
+    pub fn encrypt_to_base64<T: ?Sized + AsRef<[u8]>>(&mut self, data: &T) -> String {
+        base64::encode(&self.encrypt_to_bytes(data))
+    }
+
+    pub fn encrypt_to_bytes<T: ?Sized + AsRef<[u8]>>(&mut self, data: &T) -> Vec<u8> {
+        let bytes = data.as_ref();
+
         match self {
             MagicCrypt::DES(mc) => {
                 let len = bytes.len();
