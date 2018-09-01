@@ -1,6 +1,6 @@
 [package]
 name = "magic-crypt"
-version = "2.1.1"
+version = "2.1.2"
 authors = ["Magic Len <len@magiclen.org>"]
 repository = "https://github.com/magiclen/MagicCrypt"
 homepage = "https://magiclen.org/aes"

@@ -636,70 +636,70 @@ impl MagicCrypt {
 macro_rules! new_magic_crypt {
     ( $key:expr ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit128, None)
         }
     };
     ( $key:expr, 64 ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit64, None)
         }
     };
     ( $key:expr, 128 ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit128, None)
         }
     };
     ( $key:expr, 192 ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit192, None)
         }
     };
     ( $key:expr, 256 ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit256, None)
         }
     };
     ( $key:expr, 64 ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit64, None)
         }
     };
     ( $key:expr, 64, $iv:expr ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit64, Some($iv))
         }
     };
     ( $key:expr, 128, $iv:expr ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit128, Some($iv))
         }
     };
     ( $key:expr, 192, $iv:expr ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit192, Some($iv))
         }
     };
     ( $key:expr, 256, $iv:expr ) => {
         {
-            use self::magic_crypt::*;
+            use ::magic_crypt::*;
 
             MagicCrypt::new($key, SecureBit::Bit256, Some($iv))
         }
