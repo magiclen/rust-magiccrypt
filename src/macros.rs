@@ -5,42 +5,42 @@ macro_rules! new_magic_crypt {
         {
             use ::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit128, None)
+            MagicCrypt::new($key, SecureBit::Bit128, None::<String>)
         }
     };
     ( $key:expr, 64 ) => {
         {
             use ::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit64, None)
+            MagicCrypt::new($key, SecureBit::Bit64, None::<String>)
         }
     };
     ( $key:expr, 128 ) => {
         {
             use ::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit128, None)
+            MagicCrypt::new($key, SecureBit::Bit128, None::<String>)
         }
     };
     ( $key:expr, 192 ) => {
         {
             use ::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit192, None)
+            MagicCrypt::new($key, SecureBit::Bit192, None::<String>)
         }
     };
     ( $key:expr, 256 ) => {
         {
             use ::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit256, None)
+            MagicCrypt::new($key, SecureBit::Bit256, None::<String>)
         }
     };
     ( $key:expr, 64 ) => {
         {
             use ::magic_crypt::*;
 
-            MagicCrypt::new($key, SecureBit::Bit64, None)
+            MagicCrypt::new($key, SecureBit::Bit64, None::<String>)
         }
     };
     ( $key:expr, 64, $iv:expr ) => {

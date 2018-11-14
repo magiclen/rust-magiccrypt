@@ -179,12 +179,12 @@ pub enum Error {
 
 impl MagicCrypt {
     /// Create a new MagicCrypt instance. You may want to use `new_magic_crypt!` macro.
-    pub fn new(key: &str, bit: SecureBit, iv: Option<&str>) -> MagicCrypt {
+    pub fn new<S: AsRef<str>, V: AsRef<str>>(key: S, bit: SecureBit, iv: Option<V>) -> MagicCrypt {
         if let SecureBit::Bit64 = bit {
             let iv = match iv {
                 Some(s) => {
                     let mut crc64ecma = CRC::crc64ecma();
-                    crc64ecma.digest(s.as_bytes());
+                    crc64ecma.digest(s.as_ref().as_bytes());
 
                     crc64ecma.get_crc_array().0
                 }
@@ -193,7 +193,7 @@ impl MagicCrypt {
 
             let key: [u8; 8] = {
                 let mut crc64ecma = CRC::crc64ecma();
-                crc64ecma.digest(key.as_bytes());
+                crc64ecma.digest(key.as_ref().as_bytes());
 
                 crc64ecma.get_crc_array().0
             };
@@ -204,7 +204,7 @@ impl MagicCrypt {
                 Some(s) => {
                     let mut md5 = Md5::new();
 
-                    md5.input(s.as_bytes());
+                    md5.input(s.as_ref().as_bytes());
 
                     let mut key = [0u8; 16];
 
@@ -219,7 +219,7 @@ impl MagicCrypt {
                 SecureBit::Bit128 => {
                     let mut md5 = Md5::new();
 
-                    md5.input(key.as_bytes());
+                    md5.input(key.as_ref().as_bytes());
 
                     let mut key = [0u8; 16];
 
@@ -236,7 +236,7 @@ impl MagicCrypt {
                 SecureBit::Bit192 => {
                     let mut tiger = Tiger::default();
 
-                    tiger.consume(key.as_bytes());
+                    tiger.consume(key.as_ref().as_bytes());
 
                     let key = tiger.fixed_result();
 
@@ -251,7 +251,7 @@ impl MagicCrypt {
                 SecureBit::Bit256 => {
                     let mut sha265 = Sha256::new();
 
-                    sha265.input(key.as_bytes());
+                    sha265.input(key.as_ref().as_bytes());
 
                     let mut key = [0u8; 32];
 
@@ -265,24 +265,24 @@ impl MagicCrypt {
                         decryptor,
                     })
                 }
-                _ => panic!("not here")
+                _ => unreachable!()
             }
         }
     }
 
-    pub fn encrypt_str_to_base64(&mut self, string: &str) -> String {
-        self.encrypt_to_base64(string)
+    pub fn encrypt_str_to_base64<S: AsRef<str>>(&mut self, string: S) -> String {
+        self.encrypt_to_base64(string.as_ref())
     }
 
-    pub fn encrypt_str_to_bytes(&mut self, string: &str) -> Vec<u8> {
-        self.encrypt_to_bytes(string)
+    pub fn encrypt_str_to_bytes<S: AsRef<str>>(&mut self, string: S) -> Vec<u8> {
+        self.encrypt_to_bytes(string.as_ref())
     }
 
-    pub fn encrypt_bytes_to_base64(&mut self, bytes: &[u8]) -> String {
+    pub fn encrypt_bytes_to_base64<T: ?Sized + AsRef<[u8]>>(&mut self, bytes: &T) -> String {
         self.encrypt_to_base64(bytes)
     }
 
-    pub fn encrypt_bytes_to_bytes(&mut self, bytes: &[u8]) -> Vec<u8> {
+    pub fn encrypt_bytes_to_bytes<T: ?Sized + AsRef<[u8]>>(&mut self, bytes: &T) -> Vec<u8> {
         self.encrypt_to_bytes(bytes)
     }
 
@@ -463,19 +463,20 @@ impl MagicCrypt {
         }
     }
 
-    pub fn decrypt_base64_to_string(&mut self, base64: &str) -> Result<String, Error> {
+    pub fn decrypt_base64_to_string<S: AsRef<str>>(&mut self, base64: S) -> Result<String, Error> {
         String::from_utf8(self.decrypt_base64_to_bytes(base64)?).map_err(|err| Error::StringError(err))
     }
 
-    pub fn decrypt_base64_to_bytes(&mut self, base64: &str) -> Result<Vec<u8>, Error> {
-        self.decrypt_bytes_to_bytes(&base64::decode(base64.as_bytes()).map_err(|err| Error::Base64Error(err))?)
+    pub fn decrypt_base64_to_bytes<S: AsRef<str>>(&mut self, base64: S) -> Result<Vec<u8>, Error> {
+        self.decrypt_bytes_to_bytes(&base64::decode(base64.as_ref()).map_err(|err| Error::Base64Error(err))?)
     }
 
-    pub fn decrypt_bytes_to_string(&mut self, bytes: &[u8]) -> Result<String, Error> {
+    pub fn decrypt_bytes_to_string<T: ?Sized + AsRef<[u8]>>(&mut self, bytes: &T) -> Result<String, Error> {
         String::from_utf8(self.decrypt_bytes_to_bytes(bytes)?).map_err(|err| Error::StringError(err))
     }
 
-    pub fn decrypt_bytes_to_bytes(&mut self, bytes: &[u8]) -> Result<Vec<u8>, Error> {
+    pub fn decrypt_bytes_to_bytes<T: ?Sized + AsRef<[u8]>>(&mut self, bytes: &T) -> Result<Vec<u8>, Error> {
+        let bytes = bytes.as_ref();
         match self {
             MagicCrypt::DES(mc) => {
                 let mut buffer = bytes.to_vec();
