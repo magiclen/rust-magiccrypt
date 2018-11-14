@@ -1,37 +1,38 @@
-//! # MagicCrypt
-//!
-//! ## Introduction
-//! MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, or data, using Data Encryption Standard(DES) or Advanced Encryption Standard(AES) algorithms. It supports CBC block cipher mode, PKCS5 padding and 64, 128, 192 or 256-bits key length. If the encrypted data is a string, it will be formatted automatically to Base64.
-//!
-//! ## For Rust
-//!
-//! ### Example
-//!
-//! ```
-//! #[macro_use] extern crate magic_crypt;
-//!
-//! use magic_crypt::MagicCrypt;
-//!
-//! let mut mc: MagicCrypt = new_magic_crypt!("magickey", 256);
-//!
-//! let base64 = mc.encrypt_str_to_base64("http://magiclen.org");
-//!
-//! assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
-//!
-//! assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
-//!```
-//!
-//! ## For Java
-//!
-//! Refer to https://github.com/magiclen/MagicCrypt.
-//!
-//! ## For PHP
-//!
-//! Refer to https://github.com/magiclen/MagicCrypt.
-//!
-//! ## For NodeJS
-//!
-//! Refer to https://github.com/magiclen/node-magiccrypt
+/*!
+# MagicCrypt
+
+MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, or data, using Data Encryption Standard(DES) or Advanced Encryption Standard(AES) algorithms. It supports CBC block cipher mode, PKCS5 padding and 64, 128, 192 or 256-bits key length. If the encrypted data is a string, it will be formatted automatically to Base64.
+
+## For Rust
+
+### Example
+
+```rust
+#[macro_use] extern crate magic_crypt;
+
+use magic_crypt::MagicCrypt;
+
+let mut mc: MagicCrypt = new_magic_crypt!("magickey", 256);
+
+let base64 = mc.encrypt_str_to_base64("http://magiclen.org");
+
+assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
+
+assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
+```
+
+## For Java
+
+Refer to https://github.com/magiclen/MagicCrypt.
+
+## For PHP
+
+Refer to https://github.com/magiclen/MagicCrypt.
+
+## For NodeJS
+
+Refer to https://github.com/magiclen/node-magiccrypt
+*/
 
 extern crate crypto;
 extern crate crc_any;
@@ -67,6 +68,7 @@ use crypto::digest::Digest;
 const BUFFER_SIZE: usize = 4096;
 
 /// How secure does your encryption need to be?
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SecureBit {
     Bit64,
     Bit128,
@@ -631,78 +633,4 @@ impl MagicCrypt {
     }
 }
 
-/// This macro provides a convenient way to create a MagicCrypt instance.
-#[macro_export]
-macro_rules! new_magic_crypt {
-    ( $key:expr ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit128, None)
-        }
-    };
-    ( $key:expr, 64 ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit64, None)
-        }
-    };
-    ( $key:expr, 128 ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit128, None)
-        }
-    };
-    ( $key:expr, 192 ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit192, None)
-        }
-    };
-    ( $key:expr, 256 ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit256, None)
-        }
-    };
-    ( $key:expr, 64 ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit64, None)
-        }
-    };
-    ( $key:expr, 64, $iv:expr ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit64, Some($iv))
-        }
-    };
-    ( $key:expr, 128, $iv:expr ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit128, Some($iv))
-        }
-    };
-    ( $key:expr, 192, $iv:expr ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit192, Some($iv))
-        }
-    };
-    ( $key:expr, 256, $iv:expr ) => {
-        {
-            use ::magic_crypt::*;
-
-            MagicCrypt::new($key, SecureBit::Bit256, Some($iv))
-        }
-    };
-}
-
+mod macros;
