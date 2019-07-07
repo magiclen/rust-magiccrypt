@@ -1,6 +1,6 @@
 [package]
 name = "magic-crypt"
-version = "2.1.4"
+version = "2.1.5"
 authors = ["Magic Len <len@magiclen.org>"]
 repository = "https://github.com/magiclen/MagicCrypt"
 homepage = "https://magiclen.org/aes"
@@ -18,7 +18,8 @@ appveyor = { repository = "magiclen/rust-magiccrypt", branch = "master", service
 rust-crypto = "0.2.36"
 base64 = "0.10"
 tiger-digest = "0.1.1"
-digest = "0.7.5"
-des = "0.1.0"
-block-modes = "0.1.0"
-crc-any = "1.0.0"
+digest = "0.8"
+digest-old = {package="digest" , version = "0.7.5"}
+des = "0.3"
+block-modes = "0.3"
+crc-any = "2"
