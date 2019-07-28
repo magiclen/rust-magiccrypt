@@ -1,6 +1,6 @@
 [package]
 name = "magic-crypt"
-version = "2.1.5"
+version = "2.1.6"
 authors = ["Magic Len <len@magiclen.org>"]
 repository = "https://github.com/magiclen/MagicCrypt"
 homepage = "https://magiclen.org/aes"
@@ -10,9 +10,9 @@ description= "MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt st
 readme = "README.md"
 license = "Apache-2.0"
 
-[badges]
-travis-ci = { repository = "magiclen/rust-magiccrypt", branch = "master" }
-appveyor = { repository = "magiclen/rust-magiccrypt", branch = "master", service = "github" }
+[badges.travis-ci]
+repository = "magiclen/rust-magiccrypt"
+branch = "master"
 
 [dependencies]
 rust-crypto = "0.2.36"
