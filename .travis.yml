@@ -12,24 +12,33 @@ os:
 
 matrix:
   include:
-#    - rust: stable
-#      os: linux
-#      env: TARGET=x86_64-unknown-linux-musl
-#      install: rustup target add $TARGET
-#      script: cargo test --target $TARGET
-#    - rust: beta
-#      os: linux
-#      env: TARGET=x86_64-unknown-linux-musl
-#      install: rustup target add $TARGET
-#      script: cargo test --target $TARGET
-#    - rust: nightly
-#      os: linux
-#      env: TARGET=x86_64-unknown-linux-musl
-#      install: rustup target add $TARGET
-#      script: cargo test --target $TARGET
+    - rust: stable
+      os: linux
+      env: TARGET=x86_64-unknown-linux-musl
+      install:
+        - sudo apt update
+        - sudo apt install musl-tools
+        - rustup target add $TARGET
+      script: cargo test --target $TARGET
+    - rust: beta
+      os: linux
+      env: TARGET=x86_64-unknown-linux-musl
+      install:
+        - sudo apt update
+        - sudo apt install musl-tools
+        - rustup target add $TARGET
+      script: cargo test --target $TARGET
+    - rust: nightly
+      os: linux
+      env: TARGET=x86_64-unknown-linux-musl
+      install:
+        - sudo apt update
+        - sudo apt install musl-tools
+        - rustup target add $TARGET
+      script: cargo test --target $TARGET
     - rust: stable
       os: windows
-      env: TARGET=x86_64-pc-windows-gnu
+      env: TARGET=x86_64-pc-windows-gnu CC=gcc
       install:
         - rustup set default-host $TARGET
         - rustup default $TRAVIS_RUST_VERSION
@@ -39,7 +48,7 @@ matrix:
       script: cargo test --target $TARGET
     - rust: beta
       os: windows
-      env: TARGET=x86_64-pc-windows-gnu
+      env: TARGET=x86_64-pc-windows-gnu CC=gcc
       install:
         - rustup set default-host $TARGET
         - rustup default $TRAVIS_RUST_VERSION
@@ -49,7 +58,7 @@ matrix:
       script: cargo test --target $TARGET
     - rust: nightly
       os: windows
-      env: TARGET=x86_64-pc-windows-gnu
+      env: TARGET=x86_64-pc-windows-gnu CC=gcc
       install:
         - rustup set default-host $TARGET
         - rustup default $TRAVIS_RUST_VERSION
