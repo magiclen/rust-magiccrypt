@@ -222,7 +222,7 @@ impl MagicCrypt {
         if let SecureBit::Bit64 = bit {
             let iv = match iv {
                 Some(s) => {
-                    let mut crc64ecma = CRCu64::crc64();
+                    let mut crc64ecma = CRCu64::crc64we();
                     crc64ecma.digest(s.as_ref().as_bytes());
 
                     unsafe { transmute(crc64ecma.get_crc().to_be()) }
@@ -231,7 +231,7 @@ impl MagicCrypt {
             };
 
             let key: [u8; 8] = {
-                let mut crc64ecma = CRCu64::crc64();
+                let mut crc64ecma = CRCu64::crc64we();
                 crc64ecma.digest(key.as_ref().as_bytes());
 
                 unsafe { transmute(crc64ecma.get_crc().to_be()) }
