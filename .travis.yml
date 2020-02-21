@@ -10,6 +10,9 @@ os:
   - osx
   - windows
 
+install:
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then export CC=gcc ; fi
+
 matrix:
   include:
     - rust: stable
