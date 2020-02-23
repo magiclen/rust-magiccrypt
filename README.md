@@ -25,11 +25,11 @@ assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap())
 
 ### Crates.io
 
-https://crates.io/crates/rust-magiccrypt
+https://crates.io/crates/magic-crypt
 
 ### Documentation
 
-https://docs.rs/rust-magiccrypt
+https://docs.rs/magic-crypt
 
 ## For Java
 
