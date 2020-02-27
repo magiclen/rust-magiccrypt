@@ -43,6 +43,8 @@ extern crate digest;
 extern crate digest_old;
 extern crate tiger_digest;
 
+use std::error::Error as StdError;
+use std::fmt::{Display, Error as FmtError, Formatter};
 use std::io::{self, Read, Write};
 use std::mem::transmute;
 use std::string::FromUtf8Error;
@@ -187,6 +189,25 @@ pub enum Error {
     Base64Error(base64::DecodeError),
     StringError(FromUtf8Error),
 }
+
+impl Display for Error {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
+        match self {
+            Error::CipherError(err) => {
+                match err {
+                    SymmetricCipherError::InvalidLength => f.write_str("The length is invalid."),
+                    SymmetricCipherError::InvalidPadding => f.write_str("The padding is invalid."),
+                }
+            }
+            Error::IOError(err) => Display::fmt(err, f),
+            Error::Base64Error(err) => Display::fmt(err, f),
+            Error::StringError(err) => Display::fmt(err, f),
+        }
+    }
+}
+
+impl StdError for Error {}
 
 impl From<SymmetricCipherError> for Error {
     #[inline]
