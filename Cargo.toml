@@ -24,3 +24,5 @@ digest-old = {package = "digest" , version = "0.7.5"}
 des = "0.3"
 block-modes = "0.3"
 crc-any = "2.3"
+sha2 = "0.8"
+md-5 = "0.8"

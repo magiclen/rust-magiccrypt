@@ -42,6 +42,8 @@ extern crate des;
 extern crate digest;
 extern crate digest_old;
 extern crate tiger_digest;
+extern crate md5;
+extern crate sha2;
 
 use std::error::Error as StdError;
 use std::fmt::{Display, Error as FmtError, Formatter};
@@ -51,6 +53,7 @@ use std::string::FromUtf8Error;
 
 use crc_any::CRCu64;
 
+use digest::Digest;
 use digest::generic_array::GenericArray;
 use digest_old::FixedOutput as OldFixedOutput;
 use tiger_digest::Tiger;
@@ -59,15 +62,14 @@ use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 use des::block_cipher_trait::BlockCipher;
 use des::Des;
+use md5::Md5;
+use sha2::Sha256;
 
 type DesCbc = Cbc<Des, Pkcs7>;
 
 use crypto::aes::{cbc_decryptor, cbc_encryptor, KeySize};
 use crypto::blockmodes::{PaddingProcessor, PkcsPadding};
 use crypto::buffer::{BufferResult, ReadBuffer, RefReadBuffer, RefWriteBuffer, WriteBuffer};
-use crypto::digest::Digest;
-use crypto::md5::Md5;
-use crypto::sha2::Sha256;
 use crypto::symmetriccipher::{Decryptor, Encryptor, SymmetricCipherError};
 
 const BUFFER_SIZE: usize = 4096;
@@ -265,28 +267,18 @@ impl MagicCrypt {
         } else {
             let iv = match iv {
                 Some(s) => {
-                    let mut md5 = Md5::new();
-
-                    md5.input(s.as_ref().as_bytes());
-
-                    let mut key = [0u8; 16];
-
-                    md5.result(&mut key);
-
-                    key
+                    let mut hasher = Md5::new();
+                    hasher.input(s.as_ref().as_bytes());
+                    hasher.result().into()
                 }
                 None => [0u8; 16],
             };
 
             match bit {
                 SecureBit::Bit128 => {
-                    let mut md5 = Md5::new();
-
-                    md5.input(key.as_ref().as_bytes());
-
-                    let mut key = [0u8; 16];
-
-                    md5.result(&mut key);
+                    let mut hasher = Md5::new();
+                    hasher.input(key.as_ref().as_bytes());
+                    let key = hasher.result();
 
                     let encryptor = cbc_encryptor(KeySize::KeySize128, &key, &iv, enc_padding!());
                     let decryptor = cbc_decryptor(KeySize::KeySize128, &key, &iv, dec_padding!());
@@ -312,13 +304,9 @@ impl MagicCrypt {
                     })
                 }
                 SecureBit::Bit256 => {
-                    let mut sha265 = Sha256::new();
-
-                    sha265.input(key.as_ref().as_bytes());
-
-                    let mut key = [0u8; 32];
-
-                    sha265.result(&mut key);
+                    let mut hasher = Sha256::new();
+                    hasher.input(key.as_ref().as_bytes());
+                    let key = hasher.result();
 
                     let encryptor = cbc_encryptor(KeySize::KeySize256, &key, &iv, enc_padding!());
                     let decryptor = cbc_decryptor(KeySize::KeySize256, &key, &iv, dec_padding!());
