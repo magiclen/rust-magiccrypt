@@ -12,9 +12,9 @@ MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, 
 ```rust
 #[macro_use] extern crate magic_crypt;
 
-use magic_crypt::MagicCrypt;
+use magic_crypt::MagicCryptTrait;
 
-let mut mc: MagicCrypt = new_magic_crypt!("magickey", 256);
+let mut mc = new_magic_crypt!("magickey", 256);
 
 let base64 = mc.encrypt_str_to_base64("http://magiclen.org");
 

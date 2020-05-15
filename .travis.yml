@@ -10,38 +10,26 @@ os:
   - osx
   - windows
 
-install:
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then export CC=gcc ; fi
-
 matrix:
   include:
     - rust: stable
       os: linux
       env: TARGET=x86_64-unknown-linux-musl
-      install:
-        - sudo apt update
-        - sudo apt install musl-tools
-        - rustup target add $TARGET
+      install: rustup target add $TARGET
       script: cargo test --target $TARGET
     - rust: beta
       os: linux
       env: TARGET=x86_64-unknown-linux-musl
-      install:
-        - sudo apt update
-        - sudo apt install musl-tools
-        - rustup target add $TARGET
+      install: rustup target add $TARGET
       script: cargo test --target $TARGET
     - rust: nightly
       os: linux
       env: TARGET=x86_64-unknown-linux-musl
-      install:
-        - sudo apt update
-        - sudo apt install musl-tools
-        - rustup target add $TARGET
+      install: rustup target add $TARGET
       script: cargo test --target $TARGET
     - rust: stable
       os: windows
-      env: TARGET=x86_64-pc-windows-gnu CC=gcc
+      env: TARGET=x86_64-pc-windows-gnu
       install:
         - rustup set default-host $TARGET
         - rustup default $TRAVIS_RUST_VERSION
@@ -51,7 +39,7 @@ matrix:
       script: cargo test --target $TARGET
     - rust: beta
       os: windows
-      env: TARGET=x86_64-pc-windows-gnu CC=gcc
+      env: TARGET=x86_64-pc-windows-gnu
       install:
         - rustup set default-host $TARGET
         - rustup default $TRAVIS_RUST_VERSION
@@ -61,7 +49,7 @@ matrix:
       script: cargo test --target $TARGET
     - rust: nightly
       os: windows
-      env: TARGET=x86_64-pc-windows-gnu CC=gcc
+      env: TARGET=x86_64-pc-windows-gnu
       install:
         - rustup set default-host $TARGET
         - rustup default $TRAVIS_RUST_VERSION
