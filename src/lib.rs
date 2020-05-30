@@ -23,7 +23,7 @@ assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap())
 
 ## Change the Buffer Size
 
-The defaut buffer size for the `encrypt_reader_to_writer` method and the `decrypt_reader_to_writer` method is 4096 bytes. If you want to change that, you can use the `encrypt_reader_to_writer2` method or the `decrypt_reader_to_writer2` method, and define a length explicitly.
+The default buffer size for the `encrypt_reader_to_writer` method and the `decrypt_reader_to_writer` method is 4096 bytes. If you want to change that, you can use the `encrypt_reader_to_writer2` method or the `decrypt_reader_to_writer2` method, and define a length explicitly.
 
 For example, to change the buffer size to 256 bytes,
 
