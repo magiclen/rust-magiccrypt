@@ -21,6 +21,35 @@ assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
 assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
 ```
 
+## Change the Buffer Size
+
+The defaut buffer size for the `encrypt_reader_to_writer` method and the `decrypt_reader_to_writer` method is 4096 bytes. If you want to change that, you can use the `encrypt_reader_to_writer2` method or the `decrypt_reader_to_writer2` method, and define a length explicitly.
+
+For example, to change the buffer size to 256 bytes,
+
+```rust
+#[macro_use] extern crate magic_crypt;
+extern crate base64;
+
+use std::io::Cursor;
+
+use magic_crypt::MagicCryptTrait;
+use magic_crypt::generic_array::typenum::U256;
+
+let mut mc = new_magic_crypt!("magickey", 256);
+
+let mut reader = Cursor::new("http://magiclen.org");
+let mut writer = Vec::new();
+
+mc.encrypt_reader_to_writer2::<U256>(&mut reader, &mut writer).unwrap();
+
+let base64 = base64::encode(&writer);
+
+assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
+
+assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
+```
+
 ## For Java
 
 Refer to https://github.com/magiclen/MagicCrypt.
@@ -34,6 +63,8 @@ Refer to https://github.com/magiclen/MagicCrypt.
 Refer to https://github.com/magiclen/node-magiccrypt
 */
 
+extern crate digest;
+
 mod ciphers;
 mod errors;
 mod functions;
@@ -42,16 +73,19 @@ mod secure_bit;
 mod traits;
 
 use std::io::{Read, Write};
+use std::ops::Add;
 
 pub use ciphers::aes128::MagicCrypt128;
 pub use ciphers::aes192::MagicCrypt192;
 pub use ciphers::aes256::MagicCrypt256;
 pub use ciphers::des64::MagicCrypt64;
+pub use digest::generic_array;
 pub use errors::MagicCryptError;
 pub use secure_bit::SecureBit;
 pub use traits::MagicCryptTrait;
 
-const BUFFER_SIZE: usize = 8192; // must be a multiple of 16
+use generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16};
+use generic_array::ArrayLength;
 
 #[derive(Debug, Clone)]
 enum MagicCryptCipher {
@@ -110,16 +144,18 @@ impl MagicCryptTrait for MagicCrypt {
     }
 
     #[inline]
-    fn encrypt_reader_to_writer(
+    fn encrypt_reader_to_writer2<
+        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
+    >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError> {
         match &self.cipher {
-            MagicCryptCipher::DES64(mc) => mc.encrypt_reader_to_writer(reader, writer),
-            MagicCryptCipher::AES128(mc) => mc.encrypt_reader_to_writer(reader, writer),
-            MagicCryptCipher::AES192(mc) => mc.encrypt_reader_to_writer(reader, writer),
-            MagicCryptCipher::AES256(mc) => mc.encrypt_reader_to_writer(reader, writer),
+            MagicCryptCipher::DES64(mc) => mc.encrypt_reader_to_writer2::<N>(reader, writer),
+            MagicCryptCipher::AES128(mc) => mc.encrypt_reader_to_writer2::<N>(reader, writer),
+            MagicCryptCipher::AES192(mc) => mc.encrypt_reader_to_writer2::<N>(reader, writer),
+            MagicCryptCipher::AES256(mc) => mc.encrypt_reader_to_writer2::<N>(reader, writer),
         }
     }
 
@@ -147,11 +183,15 @@ impl MagicCryptTrait for MagicCrypt {
     }
 
     #[inline]
-    fn decrypt_reader_to_writer(
+    fn decrypt_reader_to_writer2<
+        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,
+    >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
-    ) -> Result<(), MagicCryptError> {
+    ) -> Result<(), MagicCryptError>
+    where
+        <N as Add<B1>>::Output: ArrayLength<u8>, {
         match &self.cipher {
             MagicCryptCipher::DES64(mc) => mc.decrypt_reader_to_writer(reader, writer),
             MagicCryptCipher::AES128(mc) => mc.decrypt_reader_to_writer(reader, writer),

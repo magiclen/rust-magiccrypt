@@ -1,4 +1,8 @@
 use std::io::{Read, Write};
+use std::ops::Add;
+
+use crate::generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16, U4096};
+use crate::generic_array::ArrayLength;
 
 use crate::MagicCryptError;
 
@@ -44,6 +48,16 @@ pub trait MagicCryptTrait {
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
+    ) -> Result<(), MagicCryptError> {
+        self.encrypt_reader_to_writer2::<U4096>(reader, writer)
+    }
+
+    fn encrypt_reader_to_writer2<
+        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
+    >(
+        &self,
+        reader: &mut dyn Read,
+        writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError>;
 
     #[inline]
@@ -73,5 +87,17 @@ pub trait MagicCryptTrait {
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
-    ) -> Result<(), MagicCryptError>;
+    ) -> Result<(), MagicCryptError> {
+        self.decrypt_reader_to_writer2::<U4096>(reader, writer)
+    }
+
+    fn decrypt_reader_to_writer2<
+        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,
+    >(
+        &self,
+        reader: &mut dyn Read,
+        writer: &mut dyn Write,
+    ) -> Result<(), MagicCryptError>
+    where
+        <N as Add<B1>>::Output: ArrayLength<u8>;
 }

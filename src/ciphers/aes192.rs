@@ -1,6 +1,3 @@
-extern crate base64;
-
-extern crate digest;
 extern crate digest_old;
 
 extern crate block_cipher_trait;
@@ -12,12 +9,16 @@ extern crate md5;
 
 use std::intrinsics::copy;
 use std::io::{ErrorKind, Read, Write};
+use std::ops::Add;
 
 use crate::functions::*;
-use crate::{MagicCryptError, MagicCryptTrait, BUFFER_SIZE};
+use crate::{MagicCryptError, MagicCryptTrait};
 
-use digest::generic_array::GenericArray;
-use digest::Digest;
+use crate::digest::Digest;
+
+use crate::generic_array::typenum::{Add1, IsGreaterOrEqual, PartialDiv, True, B1, U16};
+use crate::generic_array::{ArrayLength, GenericArray};
+
 use digest_old::FixedOutput as OldFixedOutput;
 
 use block_cipher_trait::BlockCipher;
@@ -113,14 +114,16 @@ impl MagicCryptTrait for MagicCrypt192 {
         Ok(final_result)
     }
 
-    fn encrypt_reader_to_writer(
+    fn encrypt_reader_to_writer2<
+        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
+    >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError> {
         let mut cipher = Aes192Cbc::new_fix(&self.key, &self.iv);
 
-        let mut buffer = [0u8; BUFFER_SIZE];
+        let mut buffer: GenericArray<u8, N> = GenericArray::default();
 
         let mut l = 0;
 
@@ -133,11 +136,11 @@ impl MagicCryptTrait for MagicCrypt192 {
 
                     l += c;
 
-                    if l < BLOCK_SIZE {
+                    if l < N::USIZE {
                         continue;
                     }
 
-                    let r = l % BLOCK_SIZE;
+                    let r = l % N::USIZE;
                     let e = l - r;
 
                     cipher.encrypt_blocks(to_blocks(&mut buffer[..e]));
@@ -200,29 +203,33 @@ impl MagicCryptTrait for MagicCrypt192 {
     }
 
     #[allow(clippy::many_single_char_names)]
-    fn decrypt_reader_to_writer(
+    fn decrypt_reader_to_writer2<
+        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,
+    >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
-    ) -> Result<(), MagicCryptError> {
+    ) -> Result<(), MagicCryptError>
+    where
+        <N as Add<B1>>::Output: ArrayLength<u8>, {
         let mut cipher = Aes192Cbc::new_fix(&self.key, &self.iv);
 
-        let mut buffer = [0u8; BUFFER_SIZE + 1];
+        let mut buffer: GenericArray<u8, Add1<N>> = GenericArray::default();
 
         let mut l = 0;
 
         loop {
-            match reader.read(&mut buffer[l..BUFFER_SIZE]) {
+            match reader.read(&mut buffer[l..N::USIZE]) {
                 Ok(c) => {
                     l += c;
 
-                    if c > 0 && l < BLOCK_SIZE {
+                    if c > 0 && l < N::USIZE {
                         continue;
                     }
 
-                    let r = l % BLOCK_SIZE;
+                    let r = l % N::USIZE;
                     let e = if r > 0 {
-                        l + BLOCK_SIZE - r
+                        l + N::USIZE - r
                     } else {
                         l
                     };
