@@ -23,6 +23,35 @@ assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
 assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
 ```
 
+## Change the Buffer Size
+
+The defaut buffer size for the `encrypt_reader_to_writer` method and the `decrypt_reader_to_writer` method is 4096 bytes. If you want to change that, you can use the `encrypt_reader_to_writer2` method or the `decrypt_reader_to_writer2` method, and define a length explicitly.
+
+For example, to change the buffer size to 256 bytes,
+
+```rust
+#[macro_use] extern crate magic_crypt;
+extern crate base64;
+
+use std::io::Cursor;
+
+use magic_crypt::MagicCryptTrait;
+use magic_crypt::generic_array::typenum::U256;
+
+let mut mc = new_magic_crypt!("magickey", 256);
+
+let mut reader = Cursor::new("http://magiclen.org");
+let mut writer = Vec::new();
+
+mc.encrypt_reader_to_writer2::<U256>(&mut reader, &mut writer).unwrap();
+
+let base64 = base64::encode(&writer);
+
+assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
+
+assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
+```
+
 ### Crates.io
 
 https://crates.io/crates/magic-crypt
