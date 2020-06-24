@@ -1,5 +1,7 @@
+#[cfg(feature = "std")]
 use digest::generic_array::{ArrayLength, GenericArray};
 
+#[cfg(feature = "std")]
 #[inline]
 pub(crate) fn to_blocks<N>(data: &mut [u8]) -> &mut [GenericArray<u8, N>]
 where

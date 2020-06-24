@@ -1,7 +1,14 @@
+use alloc::vec::Vec;
+use alloc::string::String;
+
+#[cfg(feature = "std")]
 use std::io::{Read, Write};
+#[cfg(feature = "std")]
 use std::ops::Add;
 
+#[cfg(feature = "std")]
 use crate::generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16, U4096};
+#[cfg(feature = "std")]
 use crate::generic_array::ArrayLength;
 
 use crate::MagicCryptError;
@@ -37,13 +44,16 @@ pub trait MagicCryptTrait {
 
     fn encrypt_to_bytes<T: ?Sized + AsRef<[u8]>>(&self, data: &T) -> Vec<u8>;
 
+    #[cfg(feature = "std")]
     #[inline]
     fn encrypt_reader_to_base64(&self, reader: &mut dyn Read) -> Result<String, MagicCryptError> {
         self.encrypt_reader_to_bytes(reader).map(|bytes| base64::encode(&bytes))
     }
 
+    #[cfg(feature = "std")]
     fn encrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError>;
 
+    #[cfg(feature = "std")]
     fn encrypt_reader_to_writer(
         &self,
         reader: &mut dyn Read,
@@ -52,6 +62,7 @@ pub trait MagicCryptTrait {
         self.encrypt_reader_to_writer2::<U4096>(reader, writer)
     }
 
+    #[cfg(feature = "std")]
     fn encrypt_reader_to_writer2<
         N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
@@ -81,8 +92,10 @@ pub trait MagicCryptTrait {
         bytes: &T,
     ) -> Result<Vec<u8>, MagicCryptError>;
 
+    #[cfg(feature = "std")]
     fn decrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError>;
 
+    #[cfg(feature = "std")]
     fn decrypt_reader_to_writer(
         &self,
         reader: &mut dyn Read,
@@ -91,6 +104,7 @@ pub trait MagicCryptTrait {
         self.decrypt_reader_to_writer2::<U4096>(reader, writer)
     }
 
+    #[cfg(feature = "std")]
     fn decrypt_reader_to_writer2<
         N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,
     >(

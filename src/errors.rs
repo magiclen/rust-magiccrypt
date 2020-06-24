@@ -1,10 +1,15 @@
 extern crate base64;
 extern crate block_modes;
 
-use std::error::Error;
-use std::fmt::{self, Display, Formatter};
+use core::fmt::{self, Display, Formatter};
+
+use alloc::string::FromUtf8Error;
+
+#[cfg(feature = "std")]
 use std::io::Error as IOError;
-use std::string::FromUtf8Error;
+
+#[cfg(feature = "std")]
+use std::error::Error;
 
 use self::base64::DecodeError;
 use self::block_modes::BlockModeError;
@@ -12,12 +17,14 @@ use self::block_modes::BlockModeError;
 /// Errors for MagicCrypt.
 #[derive(Debug)]
 pub enum MagicCryptError {
+    #[cfg(feature = "std")]
     IOError(IOError),
     Base64Error(DecodeError),
     StringError(FromUtf8Error),
     DecryptError(BlockModeError),
 }
 
+#[cfg(feature = "std")]
 impl From<IOError> for MagicCryptError {
     #[inline]
     fn from(error: IOError) -> MagicCryptError {
@@ -50,6 +57,7 @@ impl Display for MagicCryptError {
     #[inline]
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
+            #[cfg(feature = "std")]
             MagicCryptError::IOError(err) => Display::fmt(err, f),
             MagicCryptError::Base64Error(err) => Display::fmt(err, f),
             MagicCryptError::StringError(err) => Display::fmt(err, f),
@@ -58,4 +66,5 @@ impl Display for MagicCryptError {
     }
 }
 
+#[cfg(feature = "std")]
 impl Error for MagicCryptError {}

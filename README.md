@@ -52,6 +52,16 @@ assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
 assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
 ```
 
+## No Std
+
+Disable the default features to compile this crate without std.
+
+```toml
+[dependencies.magic-crypt]
+version = "*"
+default-features = false
+```
+
 ### Crates.io
 
 https://crates.io/crates/magic-crypt

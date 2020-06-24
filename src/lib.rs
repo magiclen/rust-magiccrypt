@@ -38,6 +38,7 @@ use magic_crypt::generic_array::typenum::U256;
 
 let mut mc = new_magic_crypt!("magickey", 256);
 
+# #[cfg(feature = "std")] {
 let mut reader = Cursor::new("http://magiclen.org");
 let mut writer = Vec::new();
 
@@ -48,6 +49,17 @@ let base64 = base64::encode(&writer);
 assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
 
 assert_eq!("http://magiclen.org", mc.decrypt_base64_to_string(&base64).unwrap());
+# }
+```
+
+## No Std
+
+Disable the default features to compile this crate without std.
+
+```toml
+[dependencies.magic-crypt]
+version = "*"
+default-features = false
 ```
 
 ## For Java
@@ -63,6 +75,10 @@ Refer to https://github.com/magiclen/MagicCrypt.
 Refer to https://github.com/magiclen/node-magiccrypt
 */
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
+
 extern crate digest;
 
 mod ciphers;
@@ -72,7 +88,11 @@ mod macros;
 mod secure_bit;
 mod traits;
 
+use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
 use std::io::{Read, Write};
+#[cfg(feature = "std")]
 use std::ops::Add;
 
 pub use ciphers::aes128::MagicCrypt128;
@@ -84,7 +104,9 @@ pub use errors::MagicCryptError;
 pub use secure_bit::SecureBit;
 pub use traits::MagicCryptTrait;
 
+#[cfg(feature = "std")]
 use generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16};
+#[cfg(feature = "std")]
 use generic_array::ArrayLength;
 
 #[derive(Debug, Clone)]
@@ -133,6 +155,7 @@ impl MagicCryptTrait for MagicCrypt {
         }
     }
 
+    #[cfg(feature = "std")]
     #[inline]
     fn encrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError> {
         match &self.cipher {
@@ -143,6 +166,7 @@ impl MagicCryptTrait for MagicCrypt {
         }
     }
 
+    #[cfg(feature = "std")]
     #[inline]
     fn encrypt_reader_to_writer2<
         N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
@@ -172,6 +196,7 @@ impl MagicCryptTrait for MagicCrypt {
         }
     }
 
+    #[cfg(feature = "std")]
     #[inline]
     fn decrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError> {
         match &self.cipher {
@@ -182,6 +207,7 @@ impl MagicCryptTrait for MagicCrypt {
         }
     }
 
+    #[cfg(feature = "std")]
     #[inline]
     fn decrypt_reader_to_writer2<
         N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,

@@ -1,4 +1,3 @@
-extern crate block_cipher_trait;
 extern crate block_modes;
 
 extern crate aes_soft as aes;
@@ -6,8 +5,13 @@ extern crate aes_soft as aes;
 extern crate md5;
 extern crate sha2;
 
-use std::intrinsics::copy;
+use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
 use std::io::{ErrorKind, Read, Write};
+#[cfg(feature = "std")]
+use std::intrinsics::copy;
+#[cfg(feature = "std")]
 use std::ops::Add;
 
 use crate::functions::*;
@@ -15,29 +19,33 @@ use crate::{MagicCryptError, MagicCryptTrait};
 
 use crate::digest::Digest;
 
+#[cfg(feature = "std")]
 use crate::generic_array::typenum::{Add1, IsGreaterOrEqual, PartialDiv, True, B1, U16};
-use crate::generic_array::{ArrayLength, GenericArray};
+#[cfg(feature = "std")]
+use crate::generic_array::ArrayLength;
+use crate::generic_array::GenericArray;
 
-use block_cipher_trait::BlockCipher;
-use block_modes::block_padding::{Padding, Pkcs7};
+#[cfg(feature = "std")]
+use block_modes::block_padding::Padding;
+use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 
+use aes::block_cipher::{Block, Key};
 use aes::Aes256;
 
 use md5::Md5;
 use sha2::Sha256;
 
 type Aes256Cbc = Cbc<Aes256, Pkcs7>;
-type Key = GenericArray<u8, <Aes256 as BlockCipher>::KeySize>;
-type Block = GenericArray<u8, <Aes256 as BlockCipher>::BlockSize>;
 
+#[cfg(feature = "std")]
 const BLOCK_SIZE: usize = 16;
 
 /// This struct can help you encrypt or decrypt data via AES-256 in a quick way.
 #[derive(Debug, Clone)]
 pub struct MagicCrypt256 {
-    key: Key,
-    iv: Block,
+    key: Key<Aes256>,
+    iv: Block<Aes256>,
 }
 
 impl MagicCryptTrait for MagicCrypt256 {
@@ -45,18 +53,18 @@ impl MagicCryptTrait for MagicCrypt256 {
         let iv = match iv {
             Some(s) => {
                 let mut hasher = Md5::new();
-                hasher.input(s.as_ref().as_bytes());
+                hasher.update(s.as_ref().as_bytes());
 
-                hasher.result()
+                hasher.finalize()
             }
             None => GenericArray::default(),
         };
 
         let key = {
             let mut hasher = Sha256::new();
-            hasher.input(key.as_ref().as_bytes());
+            hasher.update(key.as_ref().as_bytes());
 
-            hasher.result()
+            hasher.finalize()
         };
 
         MagicCrypt256 {
@@ -87,6 +95,7 @@ impl MagicCryptTrait for MagicCrypt256 {
         final_result
     }
 
+    #[cfg(feature = "std")]
     fn encrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError> {
         let mut data = Vec::new();
 
@@ -111,6 +120,7 @@ impl MagicCryptTrait for MagicCrypt256 {
         Ok(final_result)
     }
 
+    #[cfg(feature = "std")]
     fn encrypt_reader_to_writer2<
         N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
@@ -181,6 +191,7 @@ impl MagicCryptTrait for MagicCrypt256 {
         Ok(final_result)
     }
 
+    #[cfg(feature = "std")]
     fn decrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError> {
         let mut bytes = Vec::new();
 
@@ -199,6 +210,7 @@ impl MagicCryptTrait for MagicCrypt256 {
         Ok(final_result)
     }
 
+    #[cfg(feature = "std")]
     #[allow(clippy::many_single_char_names)]
     fn decrypt_reader_to_writer2<
         N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,

@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 /// How secure does your encryption need to be?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
