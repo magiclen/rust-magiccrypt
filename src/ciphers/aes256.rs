@@ -143,11 +143,11 @@ impl MagicCryptTrait for MagicCrypt256 {
 
                     l += c;
 
-                    if l < N::USIZE {
+                    if l < BLOCK_SIZE {
                         continue;
                     }
 
-                    let r = l % N::USIZE;
+                    let r = l % BLOCK_SIZE;
                     let e = l - r;
 
                     cipher.encrypt_blocks(to_blocks(&mut buffer[..e]));
@@ -232,13 +232,13 @@ impl MagicCryptTrait for MagicCrypt256 {
                 Ok(c) => {
                     l += c;
 
-                    if c > 0 && l < N::USIZE {
+                    if c > 0 && l < BLOCK_SIZE {
                         continue;
                     }
 
-                    let r = l % N::USIZE;
+                    let r = l % BLOCK_SIZE;
                     let e = if r > 0 {
-                        l + N::USIZE - r
+                        l + BLOCK_SIZE - r
                     } else {
                         l
                     };
