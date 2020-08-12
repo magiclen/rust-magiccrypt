@@ -12,7 +12,7 @@ MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, 
 
 use magic_crypt::MagicCryptTrait;
 
-let mut mc = new_magic_crypt!("magickey", 256);
+let mc = new_magic_crypt!("magickey", 256);
 
 let base64 = mc.encrypt_str_to_base64("http://magiclen.org");
 
@@ -36,7 +36,7 @@ use std::io::Cursor;
 use magic_crypt::MagicCryptTrait;
 use magic_crypt::generic_array::typenum::U256;
 
-let mut mc = new_magic_crypt!("magickey", 256);
+let mc = new_magic_crypt!("magickey", 256);
 
 # #[cfg(feature = "std")] {
 let mut reader = Cursor::new("http://magiclen.org");
