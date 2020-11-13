@@ -30,7 +30,7 @@ use block_modes::block_padding::Padding;
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 
-use aes::block_cipher::{Block, Key};
+use aes::cipher::block::{Block, Key};
 use aes::Aes256;
 
 use md5::Md5;
