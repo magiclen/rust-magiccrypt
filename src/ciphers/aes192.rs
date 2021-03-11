@@ -1,10 +1,10 @@
-extern crate digest_old;
-
 extern crate block_modes;
 
 extern crate aes_soft as aes;
 
 extern crate md5;
+
+extern crate tiger;
 
 use alloc::vec::Vec;
 
@@ -26,8 +26,6 @@ use crate::generic_array::typenum::{Add1, IsGreaterOrEqual, PartialDiv, True, B1
 use crate::generic_array::ArrayLength;
 use crate::generic_array::GenericArray;
 
-use digest_old::FixedOutput as OldFixedOutput;
-
 #[cfg(feature = "std")]
 use block_modes::block_padding::Padding;
 use block_modes::block_padding::Pkcs7;
@@ -37,7 +35,7 @@ use aes::cipher::block::{Block, Key};
 use aes::Aes192;
 
 use md5::Md5;
-use tiger_digest::Tiger;
+use tiger::Tiger;
 
 type Aes192Cbc = Cbc<Aes192, Pkcs7>;
 
@@ -65,9 +63,9 @@ impl MagicCryptTrait for MagicCrypt192 {
 
         let key = {
             let mut hasher = Tiger::default();
-            hasher.consume(key.as_ref().as_bytes());
+            hasher.update(key.as_ref().as_bytes());
 
-            GenericArray::clone_from_slice(&hasher.fixed_result().as_slice())
+            hasher.finalize()
         };
 
         MagicCrypt192 {
