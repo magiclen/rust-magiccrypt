@@ -1,6 +1,6 @@
 [package]
 name = "magic-crypt"
-version = "3.1.7"
+version = "3.1.8"
 authors = ["Magic Len <len@magiclen.org>"]
 edition = "2018"
 repository = "https://github.com/magiclen/rust-magiccrypt"
@@ -11,10 +11,6 @@ description = "MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt s
 readme = "README.md"
 license = "Apache-2.0"
 include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
-
-[badges.travis-ci]
-repository = "magiclen/rust-magiccrypt"
-branch = "master"
 
 [dependencies]
 base64 = "0.13"
