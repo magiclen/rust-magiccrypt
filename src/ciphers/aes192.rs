@@ -1,6 +1,6 @@
 extern crate block_modes;
 
-extern crate aes_soft as aes;
+extern crate aes;
 
 extern crate md5;
 
@@ -31,7 +31,7 @@ use block_modes::block_padding::Padding;
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 
-use aes::cipher::block::{Block, Key};
+use aes::cipher::{Block, BlockCipherKey};
 use aes::Aes192;
 
 use md5::Md5;
@@ -45,7 +45,7 @@ const BLOCK_SIZE: usize = 16;
 /// This struct can help you encrypt or decrypt data via AES-192 in a quick way.
 #[derive(Debug, Clone)]
 pub struct MagicCrypt192 {
-    key: Key<Aes192>,
+    key: BlockCipherKey<Aes192>,
     iv: Block<Aes192>,
 }
 
