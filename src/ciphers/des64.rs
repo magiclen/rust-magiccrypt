@@ -1,9 +1,3 @@
-extern crate block_modes;
-
-extern crate aes;
-
-extern crate crc_any;
-
 use alloc::vec::Vec;
 
 #[cfg(feature = "std")]

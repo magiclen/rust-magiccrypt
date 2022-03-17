@@ -1,6 +1,3 @@
-extern crate base64;
-extern crate block_modes;
-
 use core::fmt::{self, Display, Formatter};
 
 use alloc::string::FromUtf8Error;
@@ -11,8 +8,8 @@ use std::io::Error as IOError;
 #[cfg(feature = "std")]
 use std::error::Error;
 
-use self::base64::DecodeError;
-use self::block_modes::BlockModeError;
+use base64::DecodeError;
+use block_modes::BlockModeError;
 
 /// Errors for MagicCrypt.
 #[derive(Debug)]

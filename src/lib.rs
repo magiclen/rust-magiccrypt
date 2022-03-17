@@ -8,9 +8,7 @@ MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, 
 ### Example
 
 ```rust
-#[macro_use] extern crate magic_crypt;
-
-use magic_crypt::MagicCryptTrait;
+use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 
 let mc = new_magic_crypt!("magickey", 256);
 
@@ -28,12 +26,9 @@ The default buffer size for the `encrypt_reader_to_writer` method and the `decry
 For example, to change the buffer size to 256 bytes,
 
 ```rust
-#[macro_use] extern crate magic_crypt;
-extern crate base64;
-
 use std::io::Cursor;
 
-use magic_crypt::MagicCryptTrait;
+use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 use magic_crypt::generic_array::typenum::U256;
 
 let mc = new_magic_crypt!("magickey", 256);
@@ -78,8 +73,6 @@ Refer to https://github.com/magiclen/node-magiccrypt
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
-
-extern crate digest;
 
 mod ciphers;
 mod errors;

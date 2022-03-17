@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate magic_crypt;
-
-use magic_crypt::MagicCryptTrait;
+use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 
 #[test]
 fn crypt() {

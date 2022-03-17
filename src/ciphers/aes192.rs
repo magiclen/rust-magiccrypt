@@ -1,11 +1,3 @@
-extern crate block_modes;
-
-extern crate aes;
-
-extern crate md5;
-
-extern crate tiger;
-
 use alloc::vec::Vec;
 
 #[cfg(feature = "std")]
@@ -18,13 +10,13 @@ use std::ops::Add;
 use crate::functions::*;
 use crate::{MagicCryptError, MagicCryptTrait};
 
-use crate::digest::Digest;
-
 #[cfg(feature = "std")]
 use crate::generic_array::typenum::{Add1, IsGreaterOrEqual, PartialDiv, True, B1, U16};
 #[cfg(feature = "std")]
 use crate::generic_array::ArrayLength;
 use crate::generic_array::GenericArray;
+
+use digest::Digest;
 
 #[cfg(feature = "std")]
 use block_modes::block_padding::Padding;
