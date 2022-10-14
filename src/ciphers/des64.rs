@@ -19,7 +19,7 @@ use crate::generic_array::GenericArray;
 #[cfg(feature = "std")]
 use block_modes::block_padding::Padding;
 use block_modes::block_padding::Pkcs7;
-use block_modes::{BlockMode, Cbc};
+use block_modes::{BlockMode, BlockModeError, Cbc};
 
 use des::cipher::{Block, BlockCipherKey};
 use des::Des;
@@ -248,7 +248,10 @@ impl MagicCryptTrait for MagicCrypt64 {
                         Err(ref err) if err.kind() == ErrorKind::UnexpectedEof => {
                             cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
 
-                            writer.write_all(Pkcs7::unpad(&buffer[..e]).unwrap())?;
+                            writer
+                                .write_all(Pkcs7::unpad(&buffer[..e]).map_err(|_| {
+                                    MagicCryptError::DecryptError(BlockModeError)
+                                })?)?;
 
                             break;
                         }
