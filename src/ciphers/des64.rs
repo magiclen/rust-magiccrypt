@@ -19,7 +19,9 @@ use crate::generic_array::GenericArray;
 #[cfg(feature = "std")]
 use block_modes::block_padding::Padding;
 use block_modes::block_padding::Pkcs7;
-use block_modes::{BlockMode, BlockModeError, Cbc};
+#[cfg(feature = "std")]
+use block_modes::BlockModeError;
+use block_modes::{BlockMode, Cbc};
 
 use des::cipher::{Block, BlockCipherKey};
 use des::Des;

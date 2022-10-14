@@ -21,7 +21,9 @@ use digest::Digest;
 #[cfg(feature = "std")]
 use block_modes::block_padding::Padding;
 use block_modes::block_padding::Pkcs7;
-use block_modes::{BlockMode, BlockModeError, Cbc};
+#[cfg(feature = "std")]
+use block_modes::BlockModeError;
+use block_modes::{BlockMode, Cbc};
 
 use aes::cipher::{Block, BlockCipherKey};
 use aes::Aes256;
