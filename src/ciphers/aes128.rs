@@ -21,7 +21,7 @@ use digest::Digest;
 #[cfg(feature = "std")]
 use block_modes::block_padding::Padding;
 use block_modes::block_padding::Pkcs7;
-use block_modes::{BlockMode, Cbc};
+use block_modes::{BlockMode, Cbc, BlockModeError};
 
 use aes::cipher::{Block, BlockCipherKey};
 use aes::Aes128;
@@ -250,7 +250,11 @@ impl MagicCryptTrait for MagicCrypt128 {
                         Err(ref err) if err.kind() == ErrorKind::UnexpectedEof => {
                             cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
 
-                            writer.write_all(Pkcs7::unpad(&buffer[..e]).unwrap())?;
+                            let unpad = match Pkcs7::unpad(&buffer[..e]) {
+                                Ok(unpad) => unpad,
+                                Err(_) => return Err(MagicCryptError::DecryptError(BlockModeError))
+                            };
+                            writer.write_all(unpad)?;
 
                             break;
                         }
