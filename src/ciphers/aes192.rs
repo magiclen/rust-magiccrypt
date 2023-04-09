@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-
 #[cfg(feature = "std")]
 use std::intrinsics::copy;
 #[cfg(feature = "std")]
@@ -7,29 +6,24 @@ use std::io::{ErrorKind, Read, Write};
 #[cfg(feature = "std")]
 use std::ops::Add;
 
-use crate::functions::*;
-use crate::{MagicCryptError, MagicCryptTrait};
+use aes::{
+    cipher::{Block, BlockCipherKey},
+    Aes192,
+};
+#[cfg(feature = "std")]
+use block_modes::block_padding::Padding;
+#[cfg(feature = "std")]
+use block_modes::BlockModeError;
+use block_modes::{block_padding::Pkcs7, BlockMode, Cbc};
+use digest::Digest;
+use md5::Md5;
+use tiger::Tiger;
 
 #[cfg(feature = "std")]
 use crate::generic_array::typenum::{Add1, IsGreaterOrEqual, PartialDiv, True, B1, U16};
 #[cfg(feature = "std")]
 use crate::generic_array::ArrayLength;
-use crate::generic_array::GenericArray;
-
-use digest::Digest;
-
-#[cfg(feature = "std")]
-use block_modes::block_padding::Padding;
-use block_modes::block_padding::Pkcs7;
-#[cfg(feature = "std")]
-use block_modes::BlockModeError;
-use block_modes::{BlockMode, Cbc};
-
-use aes::cipher::{Block, BlockCipherKey};
-use aes::Aes192;
-
-use md5::Md5;
-use tiger::Tiger;
+use crate::{functions::*, generic_array::GenericArray, MagicCryptError, MagicCryptTrait};
 
 type Aes192Cbc = Cbc<Aes192, Pkcs7>;
 
@@ -40,7 +34,7 @@ const BLOCK_SIZE: usize = 16;
 #[derive(Debug, Clone)]
 pub struct MagicCrypt192 {
     key: BlockCipherKey<Aes192>,
-    iv: Block<Aes192>,
+    iv:  Block<Aes192>,
 }
 
 impl MagicCryptTrait for MagicCrypt192 {
@@ -51,7 +45,7 @@ impl MagicCryptTrait for MagicCrypt192 {
                 hasher.update(s.as_ref().as_bytes());
 
                 hasher.finalize()
-            }
+            },
             None => GenericArray::default(),
         };
 
@@ -154,8 +148,8 @@ impl MagicCryptTrait for MagicCrypt192 {
                     }
 
                     l = r;
-                }
-                Err(ref err) if err.kind() == ErrorKind::Interrupted => {}
+                },
+                Err(ref err) if err.kind() == ErrorKind::Interrupted => {},
                 Err(err) => return Err(MagicCryptError::IOError(err)),
             }
         }
@@ -232,11 +226,7 @@ impl MagicCryptTrait for MagicCrypt192 {
                     }
 
                     let r = l % BLOCK_SIZE;
-                    let e = if r > 0 {
-                        l + BLOCK_SIZE - r
-                    } else {
-                        l
-                    };
+                    let e = if r > 0 { l + BLOCK_SIZE - r } else { l };
 
                     reader.read_exact(&mut buffer[l..e])?;
 
@@ -249,7 +239,7 @@ impl MagicCryptTrait for MagicCrypt192 {
                             buffer[0] = buffer[e];
 
                             l = 1;
-                        }
+                        },
                         Err(ref err) if err.kind() == ErrorKind::UnexpectedEof => {
                             cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
 
@@ -259,11 +249,11 @@ impl MagicCryptTrait for MagicCrypt192 {
                                 })?)?;
 
                             break;
-                        }
+                        },
                         Err(err) => return Err(MagicCryptError::IOError(err)),
                     }
-                }
-                Err(ref err) if err.kind() == ErrorKind::Interrupted => {}
+                },
+                Err(ref err) if err.kind() == ErrorKind::Interrupted => {},
                 Err(err) => return Err(MagicCryptError::IOError(err)),
             }
         }

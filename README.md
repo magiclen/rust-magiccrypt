@@ -30,6 +30,7 @@ For example, to change the buffer size to 256 bytes,
 ```rust
 use std::io::Cursor;
 
+use base64::Engine;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 use magic_crypt::generic_array::typenum::U256;
 
@@ -40,7 +41,7 @@ let mut writer = Vec::new();
 
 mc.encrypt_reader_to_writer2::<U256>(&mut reader, &mut writer).unwrap();
 
-let base64 = base64::encode(&writer);
+let base64 = base64::engine::general_purpose::STANDARD.encode(&writer);
 
 assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
 

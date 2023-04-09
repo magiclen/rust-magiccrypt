@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-
 #[cfg(feature = "std")]
 use std::intrinsics::copy;
 #[cfg(feature = "std")]
@@ -7,26 +6,22 @@ use std::io::{ErrorKind, Read, Write};
 #[cfg(feature = "std")]
 use std::ops::Add;
 
-use crate::functions::*;
-use crate::{MagicCryptError, MagicCryptTrait};
+#[cfg(feature = "std")]
+use block_modes::block_padding::Padding;
+#[cfg(feature = "std")]
+use block_modes::BlockModeError;
+use block_modes::{block_padding::Pkcs7, BlockMode, Cbc};
+use crc_any::CRCu64;
+use des::{
+    cipher::{Block, BlockCipherKey},
+    Des,
+};
 
 #[cfg(feature = "std")]
 use crate::generic_array::typenum::{Add1, IsGreaterOrEqual, PartialDiv, True, B1, U16};
 #[cfg(feature = "std")]
 use crate::generic_array::ArrayLength;
-use crate::generic_array::GenericArray;
-
-#[cfg(feature = "std")]
-use block_modes::block_padding::Padding;
-use block_modes::block_padding::Pkcs7;
-#[cfg(feature = "std")]
-use block_modes::BlockModeError;
-use block_modes::{BlockMode, Cbc};
-
-use des::cipher::{Block, BlockCipherKey};
-use des::Des;
-
-use crc_any::CRCu64;
+use crate::{functions::*, generic_array::GenericArray, MagicCryptError, MagicCryptTrait};
 
 type Des64Cbc = Cbc<Des, Pkcs7>;
 
@@ -37,7 +32,7 @@ const BLOCK_SIZE: usize = 8;
 #[derive(Debug, Clone)]
 pub struct MagicCrypt64 {
     key: BlockCipherKey<Des>,
-    iv: Block<Des>,
+    iv:  Block<Des>,
 }
 
 impl MagicCryptTrait for MagicCrypt64 {
@@ -48,7 +43,7 @@ impl MagicCryptTrait for MagicCrypt64 {
                 hasher.digest(s.as_ref().as_bytes());
 
                 GenericArray::clone_from_slice(&hasher.get_crc_vec_be())
-            }
+            },
             None => GenericArray::default(),
         };
 
@@ -151,8 +146,8 @@ impl MagicCryptTrait for MagicCrypt64 {
                     }
 
                     l = r;
-                }
-                Err(ref err) if err.kind() == ErrorKind::Interrupted => {}
+                },
+                Err(ref err) if err.kind() == ErrorKind::Interrupted => {},
                 Err(err) => return Err(MagicCryptError::IOError(err)),
             }
         }
@@ -229,11 +224,7 @@ impl MagicCryptTrait for MagicCrypt64 {
                     }
 
                     let r = l % BLOCK_SIZE;
-                    let e = if r > 0 {
-                        l + BLOCK_SIZE - r
-                    } else {
-                        l
-                    };
+                    let e = if r > 0 { l + BLOCK_SIZE - r } else { l };
 
                     reader.read_exact(&mut buffer[l..e])?;
 
@@ -246,7 +237,7 @@ impl MagicCryptTrait for MagicCrypt64 {
                             buffer[0] = buffer[e];
 
                             l = 1;
-                        }
+                        },
                         Err(ref err) if err.kind() == ErrorKind::UnexpectedEof => {
                             cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
 
@@ -256,11 +247,11 @@ impl MagicCryptTrait for MagicCrypt64 {
                                 })?)?;
 
                             break;
-                        }
+                        },
                         Err(err) => return Err(MagicCryptError::IOError(err)),
                     }
-                }
-                Err(ref err) if err.kind() == ErrorKind::Interrupted => {}
+                },
+                Err(ref err) if err.kind() == ErrorKind::Interrupted => {},
                 Err(err) => return Err(MagicCryptError::IOError(err)),
             }
         }

@@ -2,7 +2,7 @@
 
 use std::io::Cursor;
 
-use base64::{decode, encode};
+use base64::Engine;
 use magic_crypt::{new_magic_crypt, MagicCryptError, MagicCryptTrait};
 
 fn encrypt_reader_to_writer(mc: impl MagicCryptTrait) -> String {
@@ -14,14 +14,14 @@ fn encrypt_reader_to_writer(mc: impl MagicCryptTrait) -> String {
     let c = output_buffer.position();
     let output = output_buffer.into_inner();
 
-    encode(&output[..c as usize])
+    base64::engine::general_purpose::STANDARD.encode(&output[..c as usize])
 }
 
 fn decrypt_reader_to_writer(
     mc: impl MagicCryptTrait,
     base64: &str,
 ) -> Result<String, MagicCryptError> {
-    let encrypted_data = decode(base64).unwrap();
+    let encrypted_data = base64::engine::general_purpose::STANDARD.decode(base64).unwrap();
 
     let mut output_buffer = Cursor::new(vec![0; 32]);
 

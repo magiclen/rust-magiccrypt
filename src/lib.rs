@@ -28,6 +28,7 @@ For example, to change the buffer size to 256 bytes,
 ```rust
 use std::io::Cursor;
 
+use base64::Engine;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 use magic_crypt::generic_array::typenum::U256;
 
@@ -39,7 +40,7 @@ let mut writer = Vec::new();
 
 mc.encrypt_reader_to_writer2::<U256>(&mut reader, &mut writer).unwrap();
 
-let base64 = base64::encode(&writer);
+let base64 = base64::engine::general_purpose::STANDARD.encode(&writer);
 
 assert_eq!("DS/2U8royDnJDiNY2ps3f6ZoTbpZo8ZtUGYLGEjwLDQ=", base64);
 
@@ -82,25 +83,22 @@ mod secure_bit;
 mod traits;
 
 use alloc::vec::Vec;
-
 #[cfg(feature = "std")]
 use std::io::{Read, Write};
 #[cfg(feature = "std")]
 use std::ops::Add;
 
-pub use ciphers::aes128::MagicCrypt128;
-pub use ciphers::aes192::MagicCrypt192;
-pub use ciphers::aes256::MagicCrypt256;
-pub use ciphers::des64::MagicCrypt64;
+pub use ciphers::{
+    aes128::MagicCrypt128, aes192::MagicCrypt192, aes256::MagicCrypt256, des64::MagicCrypt64,
+};
 pub use digest::generic_array;
 pub use errors::MagicCryptError;
-pub use secure_bit::SecureBit;
-pub use traits::MagicCryptTrait;
-
 #[cfg(feature = "std")]
 use generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16};
 #[cfg(feature = "std")]
 use generic_array::ArrayLength;
+pub use secure_bit::SecureBit;
+pub use traits::MagicCryptTrait;
 
 #[derive(Debug, Clone)]
 enum MagicCryptCipher {

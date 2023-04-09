@@ -1,12 +1,9 @@
-use core::fmt::{self, Display, Formatter};
-
 use alloc::string::FromUtf8Error;
-
-#[cfg(feature = "std")]
-use std::io::Error as IOError;
-
+use core::fmt::{self, Display, Formatter};
 #[cfg(feature = "std")]
 use std::error::Error;
+#[cfg(feature = "std")]
+use std::io::Error as IOError;
 
 use base64::DecodeError;
 use block_modes::BlockModeError;

@@ -1,16 +1,15 @@
-use alloc::string::String;
-use alloc::vec::Vec;
-
+use alloc::{string::String, vec::Vec};
 #[cfg(feature = "std")]
 use std::io::{Read, Write};
 #[cfg(feature = "std")]
 use std::ops::Add;
 
+use base64::Engine;
+
 #[cfg(feature = "std")]
 use crate::generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16, U4096};
 #[cfg(feature = "std")]
 use crate::generic_array::ArrayLength;
-
 use crate::MagicCryptError;
 
 /// Methods for `MagicCrypt` and `MagicCrypt<bits>` structs.
@@ -39,7 +38,7 @@ pub trait MagicCryptTrait {
 
     #[inline]
     fn encrypt_to_base64<T: ?Sized + AsRef<[u8]>>(&self, data: &T) -> String {
-        base64::encode(&self.encrypt_to_bytes(data))
+        base64::engine::general_purpose::STANDARD.encode(self.encrypt_to_bytes(data))
     }
 
     fn encrypt_to_bytes<T: ?Sized + AsRef<[u8]>>(&self, data: &T) -> Vec<u8>;
@@ -47,7 +46,8 @@ pub trait MagicCryptTrait {
     #[cfg(feature = "std")]
     #[inline]
     fn encrypt_reader_to_base64(&self, reader: &mut dyn Read) -> Result<String, MagicCryptError> {
-        self.encrypt_reader_to_bytes(reader).map(|bytes| base64::encode(&bytes))
+        self.encrypt_reader_to_bytes(reader)
+            .map(|bytes| base64::engine::general_purpose::STANDARD.encode(bytes))
     }
 
     #[cfg(feature = "std")]
@@ -84,7 +84,9 @@ pub trait MagicCryptTrait {
         &self,
         base64: S,
     ) -> Result<Vec<u8>, MagicCryptError> {
-        self.decrypt_bytes_to_bytes(&base64::decode(base64.as_ref())?)
+        self.decrypt_bytes_to_bytes(
+            &base64::engine::general_purpose::STANDARD.decode(base64.as_ref())?,
+        )
     }
 
     fn decrypt_bytes_to_bytes<T: ?Sized + AsRef<[u8]>>(
