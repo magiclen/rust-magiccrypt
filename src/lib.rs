@@ -116,7 +116,7 @@ pub struct MagicCrypt {
 
 impl MagicCrypt {
     /// Create a new `MagicCrypt` instance. You may want to use the `new_magic_crypt!` macro.
-    pub fn new<S: AsRef<str>, V: AsRef<str>>(key: S, bit: SecureBit, iv: Option<V>) -> MagicCrypt {
+    pub fn new<S: AsRef<[u8]>, V: AsRef<[u8]>>(key: S, bit: SecureBit, iv: Option<V>) -> MagicCrypt {
         let cipher = match bit {
             SecureBit::Bit64 => MagicCryptCipher::DES64(MagicCrypt64::new(key, iv)),
             SecureBit::Bit128 => MagicCryptCipher::AES128(MagicCrypt128::new(key, iv)),
@@ -132,7 +132,7 @@ impl MagicCrypt {
 
 impl MagicCryptTrait for MagicCrypt {
     #[inline]
-    fn new<S: AsRef<str>, V: AsRef<str>>(key: S, iv: Option<V>) -> MagicCrypt {
+    fn new<S: AsRef<[u8]>, V: AsRef<[u8]>>(key: S, iv: Option<V>) -> MagicCrypt {
         MagicCrypt::new(key, SecureBit::default(), iv)
     }
 
