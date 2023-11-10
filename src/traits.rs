@@ -14,7 +14,7 @@ use crate::MagicCryptError;
 
 /// Methods for `MagicCrypt` and `MagicCrypt<bits>` structs.
 pub trait MagicCryptTrait {
-    fn new<S: AsRef<str>, V: AsRef<str>>(key: S, iv: Option<V>) -> Self;
+    fn new<S: AsRef<[u8]>, V: AsRef<[u8]>>(key: S, iv: Option<V>) -> Self;
 
     #[inline]
     fn encrypt_str_to_base64<S: AsRef<str>>(&self, string: S) -> String {

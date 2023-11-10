@@ -36,11 +36,11 @@ pub struct MagicCrypt64 {
 }
 
 impl MagicCryptTrait for MagicCrypt64 {
-    fn new<S: AsRef<str>, V: AsRef<str>>(key: S, iv: Option<V>) -> MagicCrypt64 {
+    fn new<S: AsRef<[u8]>, V: AsRef<[u8]>>(key: S, iv: Option<V>) -> MagicCrypt64 {
         let iv = match iv {
             Some(s) => {
                 let mut hasher = CRCu64::crc64we();
-                hasher.digest(s.as_ref().as_bytes());
+                hasher.digest(s.as_ref());
 
                 GenericArray::clone_from_slice(&hasher.get_crc_vec_be())
             },
@@ -49,7 +49,7 @@ impl MagicCryptTrait for MagicCrypt64 {
 
         let key = {
             let mut hasher = CRCu64::crc64we();
-            hasher.digest(key.as_ref().as_bytes());
+            hasher.digest(key.as_ref());
 
             GenericArray::clone_from_slice(&hasher.get_crc_vec_be())
         };

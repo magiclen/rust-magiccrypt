@@ -37,11 +37,11 @@ pub struct MagicCrypt128 {
 }
 
 impl MagicCryptTrait for MagicCrypt128 {
-    fn new<S: AsRef<str>, V: AsRef<str>>(key: S, iv: Option<V>) -> MagicCrypt128 {
+    fn new<S: AsRef<[u8]>, V: AsRef<[u8]>>(key: S, iv: Option<V>) -> MagicCrypt128 {
         let iv = match iv {
             Some(s) => {
                 let mut hasher = Md5::new();
-                hasher.update(s.as_ref().as_bytes());
+                hasher.update(s.as_ref());
 
                 hasher.finalize()
             },
@@ -50,7 +50,7 @@ impl MagicCryptTrait for MagicCrypt128 {
 
         let key = {
             let mut hasher = Md5::new();
-            hasher.update(key.as_ref().as_bytes());
+            hasher.update(key.as_ref());
 
             hasher.finalize()
         };
