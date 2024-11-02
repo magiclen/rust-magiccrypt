@@ -1,7 +1,7 @@
 /*!
 # MagicCrypt
 
-MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrypt strings, files, or data, using Data Encryption Standard(DES) or Advanced Encryption Standard(AES) algorithms. It supports CBC block cipher mode, PKCS5 padding and 64, 128, 192 or 256-bits key length.
+MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrypt strings, files, or data, using Data Encryption Standard(DES) or Advanced Encryption Standard(AES) algorithms. It supports CBC block cipher mode, PKCS7 padding and 64, 128, 192 or 256-bits key length.
 
 ## For Rust
 
