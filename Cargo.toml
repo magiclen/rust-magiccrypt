@@ -1,28 +1,28 @@
 [package]
 name = "magic-crypt"
-version = "3.1.13"
+version = "4.0.0"
 authors = ["Magic Len <len@magiclen.org>"]
 edition = "2021"
-rust-version = "1.61"
+rust-version = "1.65"
 repository = "https://github.com/magiclen/rust-magiccrypt"
 homepage = "https://magiclen.org/aes"
 keywords = ["crypto", "aes", "des", "encrypt", "decrypt"]
 categories = ["no-std" ,"algorithms", "cryptography"]
-description = "MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrpyt strings, files, or data, using Data Encryption Standard(DES) or Advanced Encryption Standard(AES) algorithms. It supports CBC block cipher mode, PKCS5 padding and 64, 128, 192 or 256-bits key length."
+description = "MagicCrypt is a Java/PHP/NodeJS/Rust library to encrypt/decrypt strings, files, or data, using Data Encryption Standard(DES) or Advanced Encryption Standard(AES) algorithms. It supports CBC block cipher mode, PKCS5 padding and 64, 128, 192 or 256-bits key length."
 license = "Apache-2.0"
 include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
 
 [dependencies]
-base64 = "0.21"
-digest = "0.9"
-block-modes = "0.8"
-des = "0.7"
-aes = { version = "0.7", features = ["force-soft"] }
-crc-any = "2.3"
-md-5 = "0.9"
-tiger = "0.1"
-sha2 = "0.9"
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+cbc = { version = "0.1", features = ["alloc"] }
+des = "0.8"
+aes = "0.8"
+md-5 = "0.10"
+tiger = "0.2"
+sha2 = "0.10"
+crc-any = "2.5"
 
 [features]
 default = ["std"]
-std = []
+std = ["base64/std", "cbc/std"]
+

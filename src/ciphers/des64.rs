@@ -7,32 +7,35 @@ use std::io::{ErrorKind, Read, Write};
 use std::ops::Add;
 
 #[cfg(feature = "std")]
-use block_modes::block_padding::Padding;
-#[cfg(feature = "std")]
-use block_modes::BlockModeError;
-use block_modes::{block_padding::Pkcs7, BlockMode, Cbc};
+use aes::cipher::{
+    block_padding::RawPadding,
+    generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16},
+    ArrayLength,
+};
 use crc_any::CRCu64;
 use des::{
-    cipher::{Block, BlockCipherKey},
+    cipher::{
+        block_padding::Pkcs7, generic_array::GenericArray, BlockDecryptMut, BlockEncryptMut, Iv,
+        Key, KeyIvInit,
+    },
     Des,
 };
 
 #[cfg(feature = "std")]
-use crate::generic_array::typenum::{Add1, IsGreaterOrEqual, PartialDiv, True, B1, U16};
-#[cfg(feature = "std")]
-use crate::generic_array::ArrayLength;
-use crate::{functions::*, generic_array::GenericArray, MagicCryptError, MagicCryptTrait};
+use crate::functions::to_blocks;
+use crate::{MagicCryptError, MagicCryptTrait};
 
-type Des64Cbc = Cbc<Des, Pkcs7>;
+type Des64CbcEnc = cbc::Encryptor<Des>;
+type Des64CbcDec = cbc::Decryptor<Des>;
 
 #[cfg(feature = "std")]
 const BLOCK_SIZE: usize = 8;
 
-/// This struct can help you encrypt or decrypt data via DES-64 in a quick way.
+/// This struct can help you encrypt or decrypt data via AES-64 in a quick way.
 #[derive(Debug, Clone)]
 pub struct MagicCrypt64 {
-    key: BlockCipherKey<Des>,
-    iv:  Block<Des>,
+    key: Key<Des64CbcEnc>,
+    iv:  Iv<Des64CbcEnc>,
 }
 
 impl MagicCryptTrait for MagicCrypt64 {
@@ -60,49 +63,33 @@ impl MagicCryptTrait for MagicCrypt64 {
         }
     }
 
+    #[inline]
     fn encrypt_to_bytes<T: ?Sized + AsRef<[u8]>>(&self, data: &T) -> Vec<u8> {
         let data = data.as_ref();
 
-        let data_length = data.len();
+        let cipher = Des64CbcEnc::new(&self.key, &self.iv);
 
-        let final_length = get_des_cipher_len(data_length);
-
-        let mut final_result = data.to_vec();
-
-        final_result.reserve_exact(final_length - data_length);
-
-        unsafe {
-            final_result.set_len(final_length);
-        }
-
-        let cipher = Des64Cbc::new_fix(&self.key, &self.iv);
-
-        cipher.encrypt(&mut final_result, data_length).unwrap();
-
-        final_result
+        cipher.encrypt_padded_vec_mut::<Pkcs7>(data)
     }
 
     #[cfg(feature = "std")]
     fn encrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError> {
-        let mut data = Vec::new();
+        let mut final_result = Vec::new();
 
-        reader.read_to_end(&mut data)?;
+        let data_length = reader.read_to_end(&mut final_result)?;
 
-        let data_length = data.len();
+        let padding_length = BLOCK_SIZE - (data_length % BLOCK_SIZE);
+        let final_length = data_length + padding_length;
 
-        let final_length = get_des_cipher_len(data_length);
-
-        let mut final_result = data.to_vec();
-
-        final_result.reserve_exact(final_length - data_length);
+        final_result.reserve_exact(padding_length);
 
         unsafe {
             final_result.set_len(final_length);
         }
 
-        let cipher = Des64Cbc::new_fix(&self.key, &self.iv);
+        let cipher = Des64CbcEnc::new(&self.key, &self.iv);
 
-        cipher.encrypt(&mut final_result, data_length).unwrap();
+        cipher.encrypt_padded_mut::<Pkcs7>(&mut final_result, data_length).unwrap();
 
         Ok(final_result)
     }
@@ -115,9 +102,9 @@ impl MagicCryptTrait for MagicCrypt64 {
         reader: &mut dyn Read,
         writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError> {
-        let mut cipher = Des64Cbc::new_fix(&self.key, &self.iv);
-
         let mut buffer: GenericArray<u8, N> = GenericArray::default();
+
+        let mut cipher = Des64CbcEnc::new(&self.key, &self.iv);
 
         let mut l = 0;
 
@@ -137,7 +124,7 @@ impl MagicCryptTrait for MagicCrypt64 {
                     let r = l % BLOCK_SIZE;
                     let e = l - r;
 
-                    cipher.encrypt_blocks(to_blocks(&mut buffer[..e]));
+                    cipher.encrypt_blocks_mut(to_blocks(&mut buffer[..e]));
 
                     writer.write_all(&buffer[..e])?;
 
@@ -147,52 +134,46 @@ impl MagicCryptTrait for MagicCrypt64 {
 
                     l = r;
                 },
-                Err(ref err) if err.kind() == ErrorKind::Interrupted => {},
-                Err(err) => return Err(MagicCryptError::IOError(err)),
+                Err(error) if error.kind() == ErrorKind::Interrupted => {},
+                Err(error) => return Err(MagicCryptError::IOError(error)),
             }
         }
 
-        cipher.encrypt_blocks(to_blocks(Pkcs7::pad(&mut buffer, l, BLOCK_SIZE).unwrap()));
+        let raw_block = &mut buffer[..BLOCK_SIZE];
 
-        writer.write_all(&buffer[..get_des_cipher_len(l)])?;
+        Pkcs7::raw_pad(raw_block, l);
+        cipher.encrypt_blocks_mut(to_blocks(raw_block));
+
+        writer.write_all(raw_block)?;
 
         Ok(writer.flush()?)
     }
 
+    #[inline]
     fn decrypt_bytes_to_bytes<T: ?Sized + AsRef<[u8]>>(
         &self,
         bytes: &T,
     ) -> Result<Vec<u8>, MagicCryptError> {
         let bytes = bytes.as_ref();
 
-        let mut final_result = bytes.to_vec();
+        let cipher = Des64CbcDec::new(&self.key, &self.iv);
 
-        let cipher = Des64Cbc::new_fix(&self.key, &self.iv);
-
-        let length = cipher.decrypt(&mut final_result)?.len();
-
-        unsafe {
-            final_result.set_len(length);
-        }
+        let final_result = cipher.decrypt_padded_vec_mut::<Pkcs7>(bytes)?;
 
         Ok(final_result)
     }
 
     #[cfg(feature = "std")]
     fn decrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError> {
-        let mut bytes = Vec::new();
+        let mut final_result = Vec::new();
 
-        reader.read_to_end(&mut bytes)?;
+        reader.read_to_end(&mut final_result)?;
 
-        let mut final_result = bytes.to_vec();
+        let cipher = Des64CbcDec::new(&self.key, &self.iv);
 
-        let cipher = Des64Cbc::new_fix(&self.key, &self.iv);
+        let data_length = cipher.decrypt_padded_mut::<Pkcs7>(&mut final_result)?.len();
 
-        let length = cipher.decrypt(&mut final_result)?.len();
-
-        unsafe {
-            final_result.set_len(length);
-        }
+        final_result.truncate(data_length);
 
         Ok(final_result)
     }
@@ -208,29 +189,33 @@ impl MagicCryptTrait for MagicCrypt64 {
     ) -> Result<(), MagicCryptError>
     where
         <N as Add<B1>>::Output: ArrayLength<u8>, {
-        let mut cipher = Des64Cbc::new_fix(&self.key, &self.iv);
+        let mut buffer: GenericArray<u8, N> = GenericArray::default();
 
-        let mut buffer: GenericArray<u8, Add1<N>> = GenericArray::default();
-
+        let mut cipher = Des64CbcDec::new(&self.key, &self.iv);
         let mut l = 0;
 
         loop {
-            match reader.read(&mut buffer[l..N::USIZE]) {
+            match reader.read(&mut buffer[l..]) {
                 Ok(c) => {
+                    if c == 0 {
+                        break;
+                    }
+
                     l += c;
 
-                    if c > 0 && l < BLOCK_SIZE {
+                    if l < BLOCK_SIZE {
                         continue;
                     }
 
                     let r = l % BLOCK_SIZE;
                     let e = if r > 0 { l + BLOCK_SIZE - r } else { l };
 
+                    // fill the last block
                     reader.read_exact(&mut buffer[l..e])?;
 
                     match reader.read_exact(&mut buffer[e..(e + 1)]) {
                         Ok(()) => {
-                            cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
+                            cipher.decrypt_blocks_mut(to_blocks(&mut buffer[..e]));
 
                             writer.write_all(&buffer[..e])?;
 
@@ -238,21 +223,18 @@ impl MagicCryptTrait for MagicCrypt64 {
 
                             l = 1;
                         },
-                        Err(ref err) if err.kind() == ErrorKind::UnexpectedEof => {
-                            cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
+                        Err(error) if error.kind() == ErrorKind::UnexpectedEof => {
+                            cipher.decrypt_blocks_mut(to_blocks(&mut buffer[..e]));
 
-                            writer
-                                .write_all(Pkcs7::unpad(&buffer[..e]).map_err(|_| {
-                                    MagicCryptError::DecryptError(BlockModeError)
-                                })?)?;
+                            writer.write_all(Pkcs7::raw_unpad(&buffer[..e])?)?;
 
                             break;
                         },
-                        Err(err) => return Err(MagicCryptError::IOError(err)),
+                        Err(error) => return Err(MagicCryptError::IOError(error)),
                     }
                 },
-                Err(ref err) if err.kind() == ErrorKind::Interrupted => {},
-                Err(err) => return Err(MagicCryptError::IOError(err)),
+                Err(error) if error.kind() == ErrorKind::Interrupted => {},
+                Err(error) => return Err(MagicCryptError::IOError(error)),
             }
         }
 

@@ -6,7 +6,7 @@ use std::error::Error;
 use std::io::Error as IOError;
 
 use base64::DecodeError;
-use block_modes::BlockModeError;
+use cbc::cipher::block_padding::UnpadError;
 
 /// Errors for MagicCrypt.
 #[derive(Debug)]
@@ -15,7 +15,7 @@ pub enum MagicCryptError {
     IOError(IOError),
     Base64Error(DecodeError),
     StringError(FromUtf8Error),
-    DecryptError(BlockModeError),
+    DecryptError(UnpadError),
 }
 
 #[cfg(feature = "std")]
@@ -40,9 +40,9 @@ impl From<FromUtf8Error> for MagicCryptError {
     }
 }
 
-impl From<BlockModeError> for MagicCryptError {
+impl From<UnpadError> for MagicCryptError {
     #[inline]
-    fn from(error: BlockModeError) -> MagicCryptError {
+    fn from(error: UnpadError) -> MagicCryptError {
         MagicCryptError::DecryptError(error)
     }
 }

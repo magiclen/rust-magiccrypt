@@ -1,18 +1,13 @@
 use core::convert::TryFrom;
 
 /// How secure does your encryption need to be?
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SecureBit {
     Bit64,
+    #[default]
     Bit128,
     Bit192,
     Bit256,
-}
-
-impl Default for SecureBit {
-    fn default() -> Self {
-        SecureBit::Bit128
-    }
 }
 
 impl TryFrom<u16> for SecureBit {
