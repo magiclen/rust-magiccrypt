@@ -21,7 +21,7 @@ md-5 = "0.11"
 tiger = "0.3"
 sha2 = "0.11"
 crc-any = "3"
-zeroize = { version = "1", default-features = false }
+zeroize = { version = "1.8.1", default-features = false }
 
 [features]
 default = ["std"]
