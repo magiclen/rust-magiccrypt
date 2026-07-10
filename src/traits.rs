@@ -1,16 +1,14 @@
 use alloc::{string::String, vec::Vec};
 #[cfg(feature = "std")]
 use std::io::{Read, Write};
-#[cfg(feature = "std")]
-use std::ops::Add;
 
 use base64::Engine;
 
-#[cfg(feature = "std")]
-use crate::generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16, U4096};
-#[cfg(feature = "std")]
-use crate::generic_array::ArrayLength;
 use crate::MagicCryptError;
+#[cfg(feature = "std")]
+use crate::array::ArraySize;
+#[cfg(feature = "std")]
+use crate::array::typenum::{IsGreaterOrEqual, PartialDiv, True, U16, U4096};
 
 /// Methods for `MagicCrypt` and `MagicCrypt<bits>` structs.
 pub trait MagicCryptTrait {
@@ -64,7 +62,7 @@ pub trait MagicCryptTrait {
 
     #[cfg(feature = "std")]
     fn encrypt_reader_to_writer2<
-        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
+        N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
         &self,
         reader: &mut dyn Read,
@@ -108,12 +106,10 @@ pub trait MagicCryptTrait {
 
     #[cfg(feature = "std")]
     fn decrypt_reader_to_writer2<
-        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,
+        N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
-    ) -> Result<(), MagicCryptError>
-    where
-        <N as Add<B1>>::Output: ArrayLength<u8>;
+    ) -> Result<(), MagicCryptError>;
 }

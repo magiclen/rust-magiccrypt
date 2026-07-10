@@ -2,23 +2,20 @@ use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::io::{ErrorKind, Read, Write};
 #[cfg(feature = "std")]
-use std::ops::Add;
-#[cfg(feature = "std")]
 use std::ptr::copy;
 
 #[cfg(feature = "std")]
 use aes::cipher::{
-    block_padding::RawPadding,
-    generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16},
-    ArrayLength,
+    array::ArraySize,
+    block_padding::Padding,
+    typenum::{IsGreaterOrEqual, PartialDiv, True, U16},
 };
 use crc_any::CRCu64;
 use des::{
-    cipher::{
-        block_padding::Pkcs7, generic_array::GenericArray, BlockDecryptMut, BlockEncryptMut, Iv,
-        Key, KeyIvInit,
-    },
     Des,
+    cipher::{
+        BlockModeDecrypt, BlockModeEncrypt, Iv, Key, KeyIvInit, array::Array, block_padding::Pkcs7,
+    },
 };
 
 #[cfg(feature = "std")]
@@ -45,16 +42,16 @@ impl MagicCryptTrait for MagicCrypt64 {
                 let mut hasher = CRCu64::crc64we();
                 hasher.digest(s.as_ref());
 
-                GenericArray::clone_from_slice(&hasher.get_crc_vec_be())
+                Array::try_from(hasher.get_crc_vec_be().as_slice()).unwrap()
             },
-            None => GenericArray::default(),
+            None => Array::default(),
         };
 
         let key = {
             let mut hasher = CRCu64::crc64we();
             hasher.digest(key.as_ref());
 
-            GenericArray::clone_from_slice(&hasher.get_crc_vec_be())
+            Array::try_from(hasher.get_crc_vec_be().as_slice()).unwrap()
         };
 
         MagicCrypt64 {
@@ -69,7 +66,7 @@ impl MagicCryptTrait for MagicCrypt64 {
 
         let cipher = Des64CbcEnc::new(&self.key, &self.iv);
 
-        cipher.encrypt_padded_vec_mut::<Pkcs7>(data)
+        cipher.encrypt_padded_vec::<Pkcs7>(data)
     }
 
     #[cfg(feature = "std")]
@@ -81,28 +78,24 @@ impl MagicCryptTrait for MagicCrypt64 {
         let padding_length = BLOCK_SIZE - (data_length % BLOCK_SIZE);
         let final_length = data_length + padding_length;
 
-        final_result.reserve_exact(padding_length);
-
-        unsafe {
-            final_result.set_len(final_length);
-        }
+        final_result.resize(final_length, 0);
 
         let cipher = Des64CbcEnc::new(&self.key, &self.iv);
 
-        cipher.encrypt_padded_mut::<Pkcs7>(&mut final_result, data_length).unwrap();
+        cipher.encrypt_padded::<Pkcs7>(&mut final_result, data_length).unwrap();
 
         Ok(final_result)
     }
 
     #[cfg(feature = "std")]
     fn encrypt_reader_to_writer2<
-        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
+        N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError> {
-        let mut buffer: GenericArray<u8, N> = GenericArray::default();
+        let mut buffer: Array<u8, N> = Array::default();
 
         let mut cipher = Des64CbcEnc::new(&self.key, &self.iv);
 
@@ -124,7 +117,7 @@ impl MagicCryptTrait for MagicCrypt64 {
                     let r = l % BLOCK_SIZE;
                     let e = l - r;
 
-                    cipher.encrypt_blocks_mut(to_blocks(&mut buffer[..e]));
+                    cipher.encrypt_blocks(to_blocks(&mut buffer[..e]));
 
                     writer.write_all(&buffer[..e])?;
 
@@ -142,7 +135,7 @@ impl MagicCryptTrait for MagicCrypt64 {
         let raw_block = &mut buffer[..BLOCK_SIZE];
 
         Pkcs7::raw_pad(raw_block, l);
-        cipher.encrypt_blocks_mut(to_blocks(raw_block));
+        cipher.encrypt_blocks(to_blocks(raw_block));
 
         writer.write_all(raw_block)?;
 
@@ -158,7 +151,7 @@ impl MagicCryptTrait for MagicCrypt64 {
 
         let cipher = Des64CbcDec::new(&self.key, &self.iv);
 
-        let final_result = cipher.decrypt_padded_vec_mut::<Pkcs7>(bytes)?;
+        let final_result = cipher.decrypt_padded_vec::<Pkcs7>(bytes)?;
 
         Ok(final_result)
     }
@@ -171,7 +164,7 @@ impl MagicCryptTrait for MagicCrypt64 {
 
         let cipher = Des64CbcDec::new(&self.key, &self.iv);
 
-        let data_length = cipher.decrypt_padded_mut::<Pkcs7>(&mut final_result)?.len();
+        let data_length = cipher.decrypt_padded::<Pkcs7>(&mut final_result)?.len();
 
         final_result.truncate(data_length);
 
@@ -181,15 +174,14 @@ impl MagicCryptTrait for MagicCrypt64 {
     #[cfg(feature = "std")]
     #[allow(clippy::many_single_char_names)]
     fn decrypt_reader_to_writer2<
-        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,
+        N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
-    ) -> Result<(), MagicCryptError>
-    where
-        <N as Add<B1>>::Output: ArrayLength<u8>, {
-        let mut buffer: GenericArray<u8, N> = GenericArray::default();
+    ) -> Result<(), MagicCryptError> {
+        let mut buffer: Array<u8, N> = Array::default();
+        let mut next_byte = [0];
 
         let mut cipher = Des64CbcDec::new(&self.key, &self.iv);
         let mut l = 0;
@@ -213,18 +205,18 @@ impl MagicCryptTrait for MagicCrypt64 {
                     // fill the last block
                     reader.read_exact(&mut buffer[l..e])?;
 
-                    match reader.read_exact(&mut buffer[e..(e + 1)]) {
+                    match reader.read_exact(&mut next_byte) {
                         Ok(()) => {
-                            cipher.decrypt_blocks_mut(to_blocks(&mut buffer[..e]));
+                            cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
 
                             writer.write_all(&buffer[..e])?;
 
-                            buffer[0] = buffer[e];
+                            buffer[0] = next_byte[0];
 
                             l = 1;
                         },
                         Err(error) if error.kind() == ErrorKind::UnexpectedEof => {
-                            cipher.decrypt_blocks_mut(to_blocks(&mut buffer[..e]));
+                            cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
 
                             writer.write_all(Pkcs7::raw_unpad(&buffer[..e])?)?;
 

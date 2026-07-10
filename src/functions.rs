@@ -1,14 +1,14 @@
 #[cfg(feature = "std")]
-use cbc::cipher::{generic_array::GenericArray, ArrayLength};
+use cbc::cipher::array::{Array, ArraySize};
 
 #[cfg(feature = "std")]
 #[inline]
-pub(crate) fn to_blocks<N>(data: &mut [u8]) -> &mut [GenericArray<u8, N>]
+pub(crate) fn to_blocks<N>(data: &mut [u8]) -> &mut [Array<u8, N>]
 where
-    N: ArrayLength<u8>, {
-    let n = N::USIZE;
+    N: ArraySize, {
+    let (blocks, remainder) = Array::slice_as_chunks_mut(data);
 
-    unsafe {
-        core::slice::from_raw_parts_mut(data.as_ptr() as *mut GenericArray<u8, N>, data.len() / n)
-    }
+    debug_assert!(remainder.is_empty());
+
+    blocks
 }

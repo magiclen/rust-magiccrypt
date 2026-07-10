@@ -1,4 +1,4 @@
-use magic_crypt::{new_magic_crypt, MagicCryptTrait};
+use magic_crypt::{MagicCryptTrait, new_magic_crypt};
 
 #[test]
 fn crypt() {

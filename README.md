@@ -32,7 +32,7 @@ use std::io::Cursor;
 
 use base64::Engine;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
-use magic_crypt::generic_array::typenum::U256;
+use magic_crypt::array::typenum::U256;
 
 let mc = new_magic_crypt!("magickey", 256);
 

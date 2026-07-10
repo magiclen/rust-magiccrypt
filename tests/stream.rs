@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use base64::Engine;
-use magic_crypt::{new_magic_crypt, MagicCryptError, MagicCryptTrait};
+use magic_crypt::{MagicCryptError, MagicCryptTrait, new_magic_crypt};
 
 fn encrypt_reader_to_writer(mc: impl MagicCryptTrait) -> String {
     let mut output_buffer = Cursor::new([0; 32]);

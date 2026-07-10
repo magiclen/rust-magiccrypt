@@ -30,7 +30,7 @@ use std::io::Cursor;
 
 use base64::Engine;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
-use magic_crypt::generic_array::typenum::U256;
+use magic_crypt::array::typenum::U256;
 
 let mc = new_magic_crypt!("magickey", 256);
 
@@ -60,15 +60,15 @@ default-features = false
 
 ## For Java
 
-Refer to https://github.com/magiclen/MagicCrypt.
+Refer to <https://github.com/magiclen/MagicCrypt>.
 
 ## For PHP
 
-Refer to https://github.com/magiclen/MagicCrypt.
+Refer to <https://github.com/magiclen/MagicCrypt>.
 
 ## For NodeJS
 
-Refer to https://github.com/magiclen/node-magiccrypt
+Refer to <https://github.com/magiclen/node-magiccrypt>.
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -85,18 +85,16 @@ mod traits;
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::io::{Read, Write};
-#[cfg(feature = "std")]
-use std::ops::Add;
 
-pub use cbc::cipher::generic_array;
+#[cfg(feature = "std")]
+use array::ArraySize;
+#[cfg(feature = "std")]
+use array::typenum::{IsGreaterOrEqual, PartialDiv, True, U16};
+pub use cbc::cipher::array;
 pub use ciphers::{
     aes128::MagicCrypt128, aes192::MagicCrypt192, aes256::MagicCrypt256, des64::MagicCrypt64,
 };
 pub use errors::MagicCryptError;
-#[cfg(feature = "std")]
-use generic_array::typenum::{IsGreaterOrEqual, PartialDiv, True, B1, U16};
-#[cfg(feature = "std")]
-use generic_array::ArrayLength;
 pub use secure_bit::SecureBit;
 pub use traits::MagicCryptTrait;
 
@@ -164,7 +162,7 @@ impl MagicCryptTrait for MagicCrypt {
     #[cfg(feature = "std")]
     #[inline]
     fn encrypt_reader_to_writer2<
-        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
+        N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
         &self,
         reader: &mut dyn Read,
@@ -205,14 +203,12 @@ impl MagicCryptTrait for MagicCrypt {
     #[cfg(feature = "std")]
     #[inline]
     fn decrypt_reader_to_writer2<
-        N: ArrayLength<u8> + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True> + Add<B1>,
+        N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
         &self,
         reader: &mut dyn Read,
         writer: &mut dyn Write,
-    ) -> Result<(), MagicCryptError>
-    where
-        <N as Add<B1>>::Output: ArrayLength<u8>, {
+    ) -> Result<(), MagicCryptError> {
         match &self.cipher {
             MagicCryptCipher::DES64(mc) => mc.decrypt_reader_to_writer(reader, writer),
             MagicCryptCipher::AES128(mc) => mc.decrypt_reader_to_writer(reader, writer),
