@@ -1,10 +1,10 @@
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
-use std::intrinsics::copy;
-#[cfg(feature = "std")]
 use std::io::{ErrorKind, Read, Write};
 #[cfg(feature = "std")]
 use std::ops::Add;
+#[cfg(feature = "std")]
+use std::ptr::copy;
 
 #[cfg(feature = "std")]
 use aes::cipher::{
