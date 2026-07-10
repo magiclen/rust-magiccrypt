@@ -1,13 +1,10 @@
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
-use std::io::{ErrorKind, Read, Write};
-#[cfg(feature = "std")]
-use std::ptr::copy;
+use std::io::{Read, Write};
 
 #[cfg(feature = "std")]
 use aes::cipher::{
     array::ArraySize,
-    block_padding::Padding,
     typenum::{IsGreaterOrEqual, PartialDiv, True, U16},
 };
 use aes::{
@@ -20,7 +17,10 @@ use md5::{Digest, Md5};
 use sha2::Sha256;
 
 #[cfg(feature = "std")]
-use crate::functions::to_blocks;
+use crate::functions::{
+    decrypt_reader_to_writer as decrypt_stream, encrypt_reader_to_writer as encrypt_stream,
+    to_blocks,
+};
 use crate::{MagicCryptError, MagicCryptTrait};
 
 type Aes256CbcEnc = cbc::Encryptor<Aes256>;
@@ -30,11 +30,13 @@ type Aes256CbcDec = cbc::Decryptor<Aes256>;
 const BLOCK_SIZE: usize = 16;
 
 /// This struct can help you encrypt or decrypt data via AES-256 in a quick way.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MagicCrypt256 {
     key: Key<Aes256CbcEnc>,
     iv:  Iv<Aes256CbcEnc>,
 }
+
+impl_cipher_secret_traits!(MagicCrypt256);
 
 impl MagicCryptTrait for MagicCrypt256 {
     fn new<S: AsRef<[u8]>, V: AsRef<[u8]>>(key: S, iv: Option<V>) -> MagicCrypt256 {
@@ -96,51 +98,11 @@ impl MagicCryptTrait for MagicCrypt256 {
         reader: &mut dyn Read,
         writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError> {
-        let mut buffer: Array<u8, N> = Array::default();
-
         let mut cipher = Aes256CbcEnc::new(&self.key, &self.iv);
 
-        let mut l = 0;
-
-        loop {
-            match reader.read(&mut buffer[l..]) {
-                Ok(c) => {
-                    if c == 0 {
-                        break;
-                    }
-
-                    l += c;
-
-                    if l < BLOCK_SIZE {
-                        continue;
-                    }
-
-                    let r = l % BLOCK_SIZE;
-                    let e = l - r;
-
-                    cipher.encrypt_blocks(to_blocks(&mut buffer[..e]));
-
-                    writer.write_all(&buffer[..e])?;
-
-                    unsafe {
-                        copy(buffer.as_ptr().add(e), buffer.as_mut_ptr(), r);
-                    }
-
-                    l = r;
-                },
-                Err(error) if error.kind() == ErrorKind::Interrupted => {},
-                Err(error) => return Err(MagicCryptError::IOError(error)),
-            }
-        }
-
-        let raw_block = &mut buffer[..BLOCK_SIZE];
-
-        Pkcs7::raw_pad(raw_block, l);
-        cipher.encrypt_blocks(to_blocks(raw_block));
-
-        writer.write_all(raw_block)?;
-
-        Ok(writer.flush()?)
+        encrypt_stream::<N>(reader, writer, BLOCK_SIZE, |buffer| {
+            cipher.encrypt_blocks(to_blocks(buffer));
+        })
     }
 
     #[inline]
@@ -173,7 +135,6 @@ impl MagicCryptTrait for MagicCrypt256 {
     }
 
     #[cfg(feature = "std")]
-    #[allow(clippy::many_single_char_names)]
     fn decrypt_reader_to_writer2<
         N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
     >(
@@ -181,56 +142,10 @@ impl MagicCryptTrait for MagicCrypt256 {
         reader: &mut dyn Read,
         writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError> {
-        let mut buffer: Array<u8, N> = Array::default();
-        let mut next_byte = [0];
-
         let mut cipher = Aes256CbcDec::new(&self.key, &self.iv);
-        let mut l = 0;
 
-        loop {
-            match reader.read(&mut buffer[l..]) {
-                Ok(c) => {
-                    if c == 0 {
-                        break;
-                    }
-
-                    l += c;
-
-                    if l < BLOCK_SIZE {
-                        continue;
-                    }
-
-                    let r = l % BLOCK_SIZE;
-                    let e = if r > 0 { l + BLOCK_SIZE - r } else { l };
-
-                    // fill the last block
-                    reader.read_exact(&mut buffer[l..e])?;
-
-                    match reader.read_exact(&mut next_byte) {
-                        Ok(()) => {
-                            cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
-
-                            writer.write_all(&buffer[..e])?;
-
-                            buffer[0] = next_byte[0];
-
-                            l = 1;
-                        },
-                        Err(error) if error.kind() == ErrorKind::UnexpectedEof => {
-                            cipher.decrypt_blocks(to_blocks(&mut buffer[..e]));
-
-                            writer.write_all(Pkcs7::raw_unpad(&buffer[..e])?)?;
-
-                            break;
-                        },
-                        Err(error) => return Err(MagicCryptError::IOError(error)),
-                    }
-                },
-                Err(error) if error.kind() == ErrorKind::Interrupted => {},
-                Err(error) => return Err(MagicCryptError::IOError(error)),
-            }
-        }
-
-        Ok(writer.flush()?)
+        decrypt_stream::<N>(reader, writer, BLOCK_SIZE, |buffer| {
+            cipher.decrypt_blocks(to_blocks(buffer));
+        })
     }
 }

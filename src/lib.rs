@@ -210,10 +210,10 @@ impl MagicCryptTrait for MagicCrypt {
         writer: &mut dyn Write,
     ) -> Result<(), MagicCryptError> {
         match &self.cipher {
-            MagicCryptCipher::DES64(mc) => mc.decrypt_reader_to_writer(reader, writer),
-            MagicCryptCipher::AES128(mc) => mc.decrypt_reader_to_writer(reader, writer),
-            MagicCryptCipher::AES192(mc) => mc.decrypt_reader_to_writer(reader, writer),
-            MagicCryptCipher::AES256(mc) => mc.decrypt_reader_to_writer(reader, writer),
+            MagicCryptCipher::DES64(mc) => mc.decrypt_reader_to_writer2::<N>(reader, writer),
+            MagicCryptCipher::AES128(mc) => mc.decrypt_reader_to_writer2::<N>(reader, writer),
+            MagicCryptCipher::AES192(mc) => mc.decrypt_reader_to_writer2::<N>(reader, writer),
+            MagicCryptCipher::AES256(mc) => mc.decrypt_reader_to_writer2::<N>(reader, writer),
         }
     }
 }

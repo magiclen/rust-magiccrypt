@@ -2,19 +2,19 @@
 #[macro_export]
 macro_rules! new_magic_crypt {
     (wrapper $key:expr) => {
-        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit128, None::<String>)
+        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit128, None::<&[u8]>)
     };
     (wrapper $key:expr,64) => {
-        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit64, None::<String>)
+        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit64, None::<&[u8]>)
     };
     (wrapper $key:expr,128) => {
-        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit128, None::<String>)
+        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit128, None::<&[u8]>)
     };
     (wrapper $key:expr,192) => {
-        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit192, None::<String>)
+        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit192, None::<&[u8]>)
     };
     (wrapper $key:expr,256) => {
-        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit256, None::<String>)
+        $crate::MagicCrypt::new($key, $crate::SecureBit::Bit256, None::<&[u8]>)
     };
     (wrapper $key:expr,64, $iv:expr) => {
         $crate::MagicCrypt::new($key, $crate::SecureBit::Bit64, Some($iv))
@@ -31,27 +31,27 @@ macro_rules! new_magic_crypt {
     ($key:expr) => {{
         use $crate::MagicCryptTrait;
 
-        $crate::MagicCrypt128::new($key, None::<String>)
+        $crate::MagicCrypt128::new($key, None::<&[u8]>)
     }};
     ($key:expr,64) => {{
         use $crate::MagicCryptTrait;
 
-        $crate::MagicCrypt64::new($key, None::<String>)
+        $crate::MagicCrypt64::new($key, None::<&[u8]>)
     }};
     ($key:expr,128) => {{
         use $crate::MagicCryptTrait;
 
-        $crate::MagicCrypt128::new($key, None::<String>)
+        $crate::MagicCrypt128::new($key, None::<&[u8]>)
     }};
     ($key:expr,192) => {{
         use $crate::MagicCryptTrait;
 
-        $crate::MagicCrypt192::new($key, None::<String>)
+        $crate::MagicCrypt192::new($key, None::<&[u8]>)
     }};
     ($key:expr,256) => {{
         use $crate::MagicCryptTrait;
 
-        $crate::MagicCrypt256::new($key, None::<String>)
+        $crate::MagicCrypt256::new($key, None::<&[u8]>)
     }};
     ($key:expr,64, $iv:expr) => {{
         use $crate::MagicCryptTrait;

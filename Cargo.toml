@@ -14,13 +14,14 @@ include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
 
 [dependencies]
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
-cbc = { version = "0.2", features = ["alloc"] }
+cbc = { version = "0.2", features = ["alloc", "zeroize"] }
 des = "0.9"
 aes = "0.9"
 md-5 = "0.11"
 tiger = "0.3"
 sha2 = "0.11"
 crc-any = "3"
+zeroize = { version = "1", default-features = false }
 
 [features]
 default = ["std"]

@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use base64::Engine;
-use magic_crypt::{MagicCryptError, MagicCryptTrait, new_magic_crypt};
+use magic_crypt::{MagicCryptError, MagicCryptTrait, array::typenum::U16, new_magic_crypt};
 
 fn encrypt_reader_to_writer(mc: impl MagicCryptTrait) -> String {
     let mut output_buffer = Cursor::new([0; 32]);
@@ -100,4 +100,47 @@ fn crypt_256_reader_writer() {
     let mc = new_magic_crypt!("xxxxxxxx", 256);
 
     assert!(decrypt_reader_to_writer(mc, &base64).is_err());
+}
+
+#[test]
+fn crypt_large_reader_writer() {
+    let data = vec![b'x'; 4097];
+    let mc = new_magic_crypt!("magickey", 256);
+    let mut encrypted_data = Vec::new();
+
+    mc.encrypt_reader_to_writer(&mut Cursor::new(&data), &mut encrypted_data).unwrap();
+
+    let mut decrypted_data = Vec::new();
+
+    mc.decrypt_reader_to_writer(&mut Cursor::new(encrypted_data), &mut decrypted_data).unwrap();
+
+    assert_eq!(data, decrypted_data);
+}
+
+#[test]
+fn crypt_wrapper_with_small_buffer() {
+    let data = "https://magiclen.org";
+    let mc = new_magic_crypt!(wrapper "magickey", 128);
+    let mut encrypted_data = Vec::new();
+
+    mc.encrypt_reader_to_writer2::<U16>(&mut Cursor::new(data), &mut encrypted_data).unwrap();
+
+    let mut decrypted_data = Vec::new();
+
+    mc.decrypt_reader_to_writer2::<U16>(&mut Cursor::new(encrypted_data), &mut decrypted_data)
+        .unwrap();
+
+    assert_eq!(data.as_bytes(), decrypted_data);
+}
+
+#[test]
+fn reject_truncated_stream() {
+    let mc = new_magic_crypt!("magickey", 128);
+    let mut encrypted_data = mc.encrypt_str_to_bytes("");
+
+    encrypted_data.pop();
+
+    assert!(
+        mc.decrypt_reader_to_writer(&mut Cursor::new(encrypted_data), &mut Vec::new()).is_err()
+    );
 }
