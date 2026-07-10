@@ -34,6 +34,23 @@ fn decrypt_reader_to_writer(
     Ok(String::from_utf8(output)?)
 }
 
+fn encrypt_reader_to_bytes(mc: impl MagicCryptTrait) -> String {
+    let output = mc.encrypt_reader_to_bytes(&mut Cursor::new("https://magiclen.org")).unwrap();
+
+    base64::engine::general_purpose::STANDARD.encode(output)
+}
+
+fn decrypt_reader_to_bytes(
+    mc: impl MagicCryptTrait,
+    base64: &str,
+) -> Result<String, MagicCryptError> {
+    let encrypted_data = base64::engine::general_purpose::STANDARD.decode(base64).unwrap();
+
+    let output = mc.decrypt_reader_to_bytes(&mut Cursor::new(encrypted_data))?;
+
+    Ok(String::from_utf8(output)?)
+}
+
 #[test]
 fn crypt_64_reader_writer() {
     let mc = new_magic_crypt!("magickey", 64);
@@ -103,6 +120,74 @@ fn crypt_256_reader_writer() {
 }
 
 #[test]
+fn crypt_64_reader_bytes() {
+    let mc = new_magic_crypt!("magickey", 64);
+
+    let base64 = encrypt_reader_to_bytes(mc);
+
+    assert_eq!("hnVcTXXaXO77Adc9jhnUV5AhIFq1SQNO", base64);
+
+    let mc = new_magic_crypt!(wrapper "magickey", 64);
+
+    assert_eq!("https://magiclen.org", decrypt_reader_to_bytes(mc, &base64).unwrap());
+
+    let mc = new_magic_crypt!("xxxxxxxx", 64);
+
+    assert!(decrypt_reader_to_bytes(mc, &base64).is_err());
+}
+
+#[test]
+fn crypt_128_reader_bytes() {
+    let mc = new_magic_crypt!("magickey", 128);
+
+    let base64 = encrypt_reader_to_bytes(mc);
+
+    assert_eq!("4tk0QoLU++c2TiZ/hke5YY9wHn2pluNIXaj8L3khj3s=", base64);
+
+    let mc = new_magic_crypt!(wrapper "magickey", 128);
+
+    assert_eq!("https://magiclen.org", decrypt_reader_to_bytes(mc, &base64).unwrap());
+
+    let mc = new_magic_crypt!("xxxxxxxx", 128);
+
+    assert!(decrypt_reader_to_bytes(mc, &base64).is_err());
+}
+
+#[test]
+fn crypt_192_reader_bytes() {
+    let mc = new_magic_crypt!("magickey", 192);
+
+    let base64 = encrypt_reader_to_bytes(mc);
+
+    assert_eq!("IccS4yndkkxev4eoy6FNlZxkz9YbxsEp5AzWiqzBDBQ=", base64);
+
+    let mc = new_magic_crypt!(wrapper "magickey", 192);
+
+    assert_eq!("https://magiclen.org", decrypt_reader_to_bytes(mc, &base64).unwrap());
+
+    let mc = new_magic_crypt!("xxxxxxxx", 192);
+
+    assert!(decrypt_reader_to_bytes(mc, &base64).is_err());
+}
+
+#[test]
+fn crypt_256_reader_bytes() {
+    let mc = new_magic_crypt!("magickey", 256);
+
+    let base64 = encrypt_reader_to_bytes(mc);
+
+    assert_eq!("jWEPYLTECqGvWJbdlRGeZIupoLX8N9DYZIUKMRp/OQY=", base64);
+
+    let mc = new_magic_crypt!(wrapper "magickey", 256);
+
+    assert_eq!("https://magiclen.org", decrypt_reader_to_bytes(mc, &base64).unwrap());
+
+    let mc = new_magic_crypt!("xxxxxxxx", 256);
+
+    assert!(decrypt_reader_to_bytes(mc, &base64).is_err());
+}
+
+#[test]
 fn crypt_large_reader_writer() {
     let data = vec![b'x'; 4097];
     let mc = new_magic_crypt!("magickey", 256);
@@ -113,6 +198,22 @@ fn crypt_large_reader_writer() {
     let mut decrypted_data = Vec::new();
 
     mc.decrypt_reader_to_writer(&mut Cursor::new(encrypted_data), &mut decrypted_data).unwrap();
+
+    assert_eq!(data, decrypted_data);
+}
+
+#[test]
+fn crypt_block_aligned_reader_bytes() {
+    // The length is a multiple of every block size, so the encryptor has to append a whole extra block of PKCS7 padding.
+    let data = vec![b'x'; 4096];
+    let mc = new_magic_crypt!("magickey", 256);
+
+    // The reader-based encryptor must produce exactly the same ciphertext as the in-memory one.
+    let encrypted_data = mc.encrypt_reader_to_bytes(&mut Cursor::new(&data)).unwrap();
+
+    assert_eq!(mc.encrypt_to_bytes(&data), encrypted_data);
+
+    let decrypted_data = mc.decrypt_reader_to_bytes(&mut Cursor::new(encrypted_data)).unwrap();
 
     assert_eq!(data, decrypted_data);
 }

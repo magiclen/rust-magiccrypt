@@ -74,6 +74,8 @@ impl MagicCryptTrait for MagicCrypt192 {
 
     #[cfg(feature = "std")]
     fn encrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError> {
+        use aes::cipher::block_padding::NoPadding;
+
         let mut final_result = Vec::new();
 
         let data_length = reader.read_to_end(&mut final_result)?;
@@ -81,11 +83,14 @@ impl MagicCryptTrait for MagicCrypt192 {
         let padding_length = BLOCK_SIZE - (data_length % BLOCK_SIZE);
         let final_length = data_length + padding_length;
 
-        final_result.resize(final_length, 0);
+        // PKCS7 padding requires that the padding bytes be equal to the number of padding bytes added.
+        let padding_byte = padding_length as u8;
+
+        final_result.resize(final_length, padding_byte);
 
         let cipher = Aes192CbcEnc::new(&self.key, &self.iv);
 
-        cipher.encrypt_padded::<Pkcs7>(&mut final_result, data_length).unwrap();
+        cipher.encrypt_padded::<NoPadding>(&mut final_result, final_length).unwrap();
 
         Ok(final_result)
     }
