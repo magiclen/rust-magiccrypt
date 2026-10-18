@@ -19,9 +19,11 @@ const MAX_BLOCK_SIZE: usize = 16;
 #[cfg(feature = "std")]
 #[inline]
 unsafe fn move_remaining<N: ArraySize>(buffer: &mut Array<u8, N>, start: usize, length: usize) {
-    // SAFETY: The stream helpers ensure that the source and destination ranges stay within the same buffer.
+    let ptr = buffer.as_mut_ptr();
+
+    // SAFETY: The stream helpers check read lengths and keep both ranges within the buffer.
     unsafe {
-        copy(buffer.as_ptr().add(start), buffer.as_mut_ptr(), length);
+        copy(ptr.add(start), ptr, length);
     }
 }
 
@@ -79,6 +81,13 @@ pub(crate) fn encrypt_reader_to_writer<N: ArraySize>(
     loop {
         match reader.read(&mut buffer[length..]) {
             Ok(count) => {
+                if count > buffer.len() - length {
+                    return Err(MagicCryptError::IOError(std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        "reader returned more bytes than the buffer can hold",
+                    )));
+                }
+
                 if count == 0 {
                     break;
                 }
@@ -133,6 +142,13 @@ pub(crate) fn decrypt_reader_to_writer<N: ArraySize>(
     loop {
         match reader.read(&mut buffer[length..]) {
             Ok(count) => {
+                if count > buffer.len() - length {
+                    return Err(MagicCryptError::IOError(std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        "reader returned more bytes than the buffer can hold",
+                    )));
+                }
+
                 if count == 0 {
                     if length != 0 || !has_pending_block {
                         return Err(PaddingError.into());

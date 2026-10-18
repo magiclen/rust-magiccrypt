@@ -61,4 +61,14 @@ impl Display for MagicCryptError {
 }
 
 #[cfg(feature = "std")]
-impl Error for MagicCryptError {}
+impl Error for MagicCryptError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            MagicCryptError::IOError(error) => Some(error),
+            MagicCryptError::Base64Error(error) => Some(error),
+            MagicCryptError::StringError(error) => Some(error),
+            MagicCryptError::DecryptError(error) => Some(error),
+        }
+    }
+}

@@ -11,6 +11,14 @@ For new applications, please use a modern library that supports authenticated en
 
 ## For Rust
 
+### Migrating from 5.x to 6.0
+
+Version 6.0 requires Rust 1.89 or later.
+
+`MagicCryptError::Base64Error` and `From<base64::DecodeError>` now use `base64` 0.23.
+If your code uses `base64::DecodeError` with this library, update your direct `base64` dependency to `0.23.1`.
+Update matches from `DecodeError::InvalidLastSymbol(_, _)` to `DecodeError::InvalidLastSymbol { .. }`.
+
 ### Example
 
 ```rust

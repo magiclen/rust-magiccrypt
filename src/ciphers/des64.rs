@@ -44,7 +44,7 @@ impl MagicCryptTrait for MagicCrypt64 {
                 let mut hasher = CRCu64::crc64we();
                 hasher.digest(s.as_ref());
 
-                Array::try_from(hasher.get_crc_vec_be().as_slice()).unwrap()
+                Array::from(hasher.get_crc().to_be_bytes())
             },
             None => Array::default(),
         };
@@ -53,7 +53,7 @@ impl MagicCryptTrait for MagicCrypt64 {
             let mut hasher = CRCu64::crc64we();
             hasher.digest(key.as_ref());
 
-            Array::try_from(hasher.get_crc_vec_be().as_slice()).unwrap()
+            Array::from(hasher.get_crc().to_be_bytes())
         };
 
         MagicCrypt64 {

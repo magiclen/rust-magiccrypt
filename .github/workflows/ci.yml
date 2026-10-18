@@ -25,6 +25,16 @@ jobs:
           components: clippy
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
+  no_std:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+      - run: rustup target add thumbv7em-none-eabi
+      - run: cargo check --no-default-features --lib --target thumbv7em-none-eabi
+
   tests:
     strategy:
       fail-fast: false
@@ -57,7 +67,7 @@ jobs:
           - macos-latest
           - windows-latest
         toolchain:
-          - 1.87
+          - 1.89
         features:
           -
           - --no-default-features

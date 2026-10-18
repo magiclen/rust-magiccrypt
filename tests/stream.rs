@@ -1,9 +1,104 @@
 #![cfg(feature = "std")]
 
-use std::io::Cursor;
+use std::io::{self, Cursor, ErrorKind, IoSlice, Read, Write};
 
 use base64::Engine;
 use magic_crypt::{MagicCryptError, MagicCryptTrait, array::typenum::U16, new_magic_crypt};
+
+struct ShortReader<'a> {
+    data:       &'a [u8],
+    chunk_size: usize,
+}
+
+impl Read for ShortReader<'_> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        let length = buffer.len().min(self.chunk_size);
+
+        self.data.read(&mut buffer[..length])
+    }
+}
+
+#[derive(Default)]
+struct ShortWriter {
+    data: Vec<u8>,
+}
+
+impl Write for ShortWriter {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        let length = buffer.len().min(5);
+
+        self.data.extend_from_slice(&buffer[..length]);
+
+        Ok(length)
+    }
+
+    fn write_vectored(&mut self, buffers: &[IoSlice<'_>]) -> io::Result<usize> {
+        let mut length = 0;
+
+        for buffer in buffers {
+            let count = buffer.len().min(5 - length);
+
+            self.data.extend_from_slice(&buffer[..count]);
+            length += count;
+
+            if length == 5 {
+                break;
+            }
+        }
+
+        Ok(length)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+struct OversizedReader;
+
+impl Read for OversizedReader {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        Ok(buffer.len() + 1)
+    }
+}
+
+fn crypt_stream_boundaries(mc: impl MagicCryptTrait, block_size: usize) {
+    for length in [0, block_size - 1, block_size, block_size + 1, 4095, 4096, 4097, 8193] {
+        let data: Vec<u8> = (0..length).map(|i| i as u8).collect();
+        let expected = mc.encrypt_to_bytes(&data);
+
+        assert_eq!(expected, mc.encrypt_reader_to_bytes(&mut Cursor::new(&data)).unwrap());
+        assert_eq!(data, mc.decrypt_reader_to_bytes(&mut Cursor::new(&expected)).unwrap());
+
+        for chunk_size in [7, 31, 4096] {
+            let mut encrypted_data = ShortWriter::default();
+
+            mc.encrypt_reader_to_writer(
+                &mut ShortReader {
+                    data: &data,
+                    chunk_size,
+                },
+                &mut encrypted_data,
+            )
+            .unwrap();
+
+            assert_eq!(expected, encrypted_data.data);
+
+            let mut decrypted_data = ShortWriter::default();
+
+            mc.decrypt_reader_to_writer(
+                &mut ShortReader {
+                    data: &encrypted_data.data,
+                    chunk_size,
+                },
+                &mut decrypted_data,
+            )
+            .unwrap();
+
+            assert_eq!(data, decrypted_data.data);
+        }
+    }
+}
 
 fn encrypt_reader_to_writer(mc: impl MagicCryptTrait) -> String {
     let mut output_buffer = Cursor::new([0; 32]);
@@ -244,4 +339,50 @@ fn reject_truncated_stream() {
     assert!(
         mc.decrypt_reader_to_writer(&mut Cursor::new(encrypted_data), &mut Vec::new()).is_err()
     );
+}
+
+#[test]
+fn crypt_64_stream_boundaries() {
+    crypt_stream_boundaries(new_magic_crypt!("magickey", 64, "123456789"), 8);
+}
+
+#[test]
+fn crypt_128_stream_boundaries() {
+    crypt_stream_boundaries(new_magic_crypt!("magickey", 128, "123456789"), 16);
+}
+
+#[test]
+fn crypt_192_stream_boundaries() {
+    crypt_stream_boundaries(new_magic_crypt!("magickey", 192, "123456789"), 16);
+}
+
+#[test]
+fn crypt_256_stream_boundaries() {
+    crypt_stream_boundaries(new_magic_crypt!("magickey", 256, "123456789"), 16);
+}
+
+#[test]
+fn reject_oversized_read_when_encrypting() {
+    let mc = new_magic_crypt!("magickey", 128);
+    let error =
+        mc.encrypt_reader_to_writer2::<U16>(&mut OversizedReader, &mut Vec::new()).unwrap_err();
+
+    let MagicCryptError::IOError(error) = error else {
+        panic!("expected an I/O error");
+    };
+
+    assert_eq!(ErrorKind::InvalidData, error.kind());
+}
+
+#[test]
+fn reject_oversized_read_when_decrypting() {
+    let mc = new_magic_crypt!("magickey", 128);
+    let error =
+        mc.decrypt_reader_to_writer2::<U16>(&mut OversizedReader, &mut Vec::new()).unwrap_err();
+
+    let MagicCryptError::IOError(error) = error else {
+        panic!("expected an I/O error");
+    };
+
+    assert_eq!(ErrorKind::InvalidData, error.kind());
 }

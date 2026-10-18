@@ -41,6 +41,7 @@ pub trait MagicCryptTrait {
 
     fn encrypt_to_bytes<T: ?Sized + AsRef<[u8]>>(&self, data: &T) -> Vec<u8>;
 
+    /// Read all input into memory and return its encrypted data as Base64.
     #[cfg(feature = "std")]
     #[inline]
     fn encrypt_reader_to_base64(&self, reader: &mut dyn Read) -> Result<String, MagicCryptError> {
@@ -48,9 +49,13 @@ pub trait MagicCryptTrait {
             .map(|bytes| base64::engine::general_purpose::STANDARD.encode(bytes))
     }
 
+    /// Read all input into memory and return its encrypted bytes.
     #[cfg(feature = "std")]
     fn encrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError>;
 
+    /// Encrypt data in chunks with a 4096-byte buffer and flush the writer on success.
+    ///
+    /// If an error occurs, the writer may already contain part of the encrypted data.
     #[cfg(feature = "std")]
     fn encrypt_reader_to_writer(
         &self,
@@ -60,6 +65,10 @@ pub trait MagicCryptTrait {
         self.encrypt_reader_to_writer2::<U4096>(reader, writer)
     }
 
+    /// Encrypt data in chunks with a buffer of `N` bytes and flush the writer on success.
+    ///
+    /// `N` must be at least 16 and a multiple of 16.
+    /// If an error occurs, the writer may already contain part of the encrypted data.
     #[cfg(feature = "std")]
     fn encrypt_reader_to_writer2<
         N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,
@@ -92,9 +101,13 @@ pub trait MagicCryptTrait {
         bytes: &T,
     ) -> Result<Vec<u8>, MagicCryptError>;
 
+    /// Read all input into memory and return its decrypted bytes.
     #[cfg(feature = "std")]
     fn decrypt_reader_to_bytes(&self, reader: &mut dyn Read) -> Result<Vec<u8>, MagicCryptError>;
 
+    /// Decrypt data in chunks with a 4096-byte buffer and flush the writer on success.
+    ///
+    /// If an error occurs, the writer may already contain part of the decrypted data.
     #[cfg(feature = "std")]
     fn decrypt_reader_to_writer(
         &self,
@@ -104,6 +117,10 @@ pub trait MagicCryptTrait {
         self.decrypt_reader_to_writer2::<U4096>(reader, writer)
     }
 
+    /// Decrypt data in chunks with a buffer of `N` bytes and flush the writer on success.
+    ///
+    /// `N` must be at least 16 and a multiple of 16.
+    /// If an error occurs, the writer may already contain part of the decrypted data.
     #[cfg(feature = "std")]
     fn decrypt_reader_to_writer2<
         N: ArraySize + PartialDiv<U16> + IsGreaterOrEqual<U16, Output = True>,

@@ -1,9 +1,9 @@
 [package]
 name = "magic-crypt"
-version = "5.0.1"
+version = "6.0.0"
 authors = ["Magic Len <len@magiclen.org>"]
 edition = "2024"
-rust-version = "1.87"
+rust-version = "1.89"
 repository = "https://github.com/magiclen/rust-magiccrypt"
 homepage = "https://magiclen.org/aes"
 keywords = ["crypto", "aes", "des", "encrypt", "decrypt"]
@@ -13,16 +13,16 @@ license = "Apache-2.0"
 include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
 
 [dependencies]
-base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+base64 = { version = "0.23", default-features = false, features = ["alloc"] }
 cbc = { version = "0.2", features = ["alloc", "zeroize"] }
-des = "0.9"
-aes = "0.9"
-md-5 = "0.11"
-tiger = "0.3"
-sha2 = "0.11"
-crc-any = "3"
-zeroize = { version = "1.8.1", default-features = false }
+des = { version = "0.9", features = ["zeroize"] }
+aes = { version = "0.9", features = ["zeroize"] }
+md-5 = { version = "0.11", features = ["zeroize"] }
+tiger = { version = "0.3", features = ["zeroize"] }
+sha2 = { version = "0.11", features = ["zeroize"] }
+crc-any = { version = "3.1", default-features = false }
+zeroize = { version = "1.8", default-features = false }
 
 [features]
 default = ["std"]
-std = ["base64/std"]
+std = ["base64/std", "crc-any/std"]
